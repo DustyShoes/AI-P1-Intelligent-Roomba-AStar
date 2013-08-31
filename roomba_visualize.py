@@ -1,7 +1,4 @@
-# Problem Set 6:
-# Visualization code for simulated robots.
-#
-# See the problem set for instructions on how to use this code.
+# Visualization code for simulated roomba robots.
 
 import math
 import time
@@ -22,6 +19,7 @@ class RobotVisualization:
         self.height = height
         self.num_robots = num_robots
         self.paused = False
+        self.quit = False
 
         # Initialize a drawing surface
         self.master = Tk()
@@ -79,7 +77,7 @@ class RobotVisualization:
           pause = 'PAUSED'
         else:
           pause = "'p' to pause"
-        return "Time: %04d; %d tiles (%d%%) cleaned     %s" % \
+        return "Time: %04d; %d tiles (%d%%) cleaned  %15s    'q' to quit" % \
             (time, num_clean_tiles, percent_clean, pause)
 
     def _map_coords(self, x, y):
@@ -101,8 +99,10 @@ class RobotVisualization:
         
     def key(self,event):
       if event.char == 'p':
-        print 'Paused'
         self.paused = not self.paused
+      if event.char == 'q':
+        self.quit = True
+        sys.exit(0)
 
     def update(self, room, robots):
         "Redraws the visualization with the specified room and robot state."

@@ -9,6 +9,7 @@ import roomba_visualize
 REALISTIC_LEAN_MAX = 0.1  # Max degrees per timestep for lean
 REALISTIC_MARBLE_PROBABILITY = 0.01  # Prob of a marble being hit in a timestep
 REALISTIC_MARBLE_MAX = 10  # How much the marble rotates the robot
+EDGE_REFINEMENT_STEPS = 4
 
 class Position(object):
     """
@@ -112,6 +113,31 @@ class RectangularRoom(object):
       """ Returns True if the tile (m, n) is occupied by an 
       immovable object.  Assumes m,n is in room."""
       return (m,n) in self.occupied
+      
+    def setWall(self, (x1,y1), (x2,y2)):
+      """ Draws a wall from (x1,y1) to (x2,y2) 
+        Will widen wall so robot can't jump over."""
+      if x1 > x2: # make sure x1 < x2
+        (x1,y1,x2,y2) = (x2,y2,x1,y1)
+      if x2 - x1 == 0:
+        x1 -= 0.001
+      dx = (x2 - x1)
+      dy = (y2 - y1)
+      m = dy / dx   # slope
+      print "slope: " + str(m)
+      b = y1 - x1 * m
+      x = x1
+      (lx,ly) = (x1,x2)
+      step = dx / math.sqrt(dx * dx + dy * dy)
+      while x < x2:
+        y = x * m + b
+        blockx = math.floor(x + 0.5)
+        blocky = math.floor(y + 0.5)
+        self.occupied.append((blockx, blocky))
+        if x != x1 and lx != blockx and ly != blocky:
+          self.occupied.append((blockx-1, blocky))
+        (lx, ly) = (blockx, blocky)
+        x +=step
 
     def getNumTiles(self):
         """ Return the total number of tiles in the room.
@@ -244,7 +270,6 @@ class Robot(object):
             if not amt:
                 amt = 90.0
             self.robot.dir = int(self.robot.dir + amt % 360)
-            print "turn right" + str(amt)
         elif act == 'Suck':
             self.robot.room.cleanTileAtPosition(self.robot.pos)
             self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
@@ -258,11 +283,19 @@ class Robot(object):
                 self.robot.pos = newpos
                 self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
             else:
-                # self.robot.pos doesn't change if we bumped
-                # This does not handle being up against a wall, we stay one step 
-                # (speed value really) away from it.
-                # Rather than fancy ray intersection math, we could keep checking 
-                # half distances for a few times to get closer if needed.
+                # Can't take a full step, so lets try to get close
+                mindist = 0
+                maxdist = self.robot.speed * amt / 100.0
+                for i in range(EDGE_REFINEMENT_STEPS):
+                  # maxdist is too far, halfway
+                  p1 = self.robot.pos.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
+                  if self.robot.room.isPositionInRoom(p1):
+                    mindist = (maxdist - mindist) * 1.0/2 + mindist
+                    newpos = p1 # save better point
+                  else:
+                    maxdist = (maxdist - mindist) * 1.0/2 + mindist
+                    newpos = self.robot.pos.getNewPosition(self.robot.dir, mindist)
+                self.robot.pos = newpos
                 self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))
         else:
           raise ValueError("Unknown action: " + act)
@@ -343,6 +376,8 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
             totaltime += 1
             if ui_enable:
                 anim.update(curroom, robots)
+                if anim.quit:
+                  return float(totaltime)/num_trials
         num -= 1
         if ui_enable:
             anim.done()
@@ -357,7 +392,7 @@ def showPlot1(title, x_label, y_label):
     times1 = []
     times2 = []
     for num_robots in num_robot_range:
-        print "Plotting", num_robots, "robots..."
+        print("Plotting", num_robots, "robots...")
         times1.append(runSimulation(num_robots, 1.0, 20, 20, 0.8, 20, StandardRobot))
         times2.append(runSimulation(num_robots, 1.0, 20, 20, 0.8, 20, RandomWalkRobot))
     pylab.plot(num_robot_range, times1)
@@ -378,7 +413,7 @@ def showPlot2(title, x_label, y_label):
     times2 = []
     for width in [10, 20, 25, 50]:
         height = 300/width
-        print "Plotting cleaning time for a room of width:", width, "by height:", height
+        print("Plotting cleaning time for a room of width:", width, "by height:", height)
         aspect_ratios.append(float(width) / height)
         times1.append(runSimulation(2, 1.0, width, height, 0.8, 200, StandardRobot))
         times2.append(runSimulation(2, 1.0, width, height, 0.8, 200, RandomWalkRobot))
@@ -390,5 +425,3 @@ def showPlot2(title, x_label, y_label):
     pylab.ylabel(y_label)
     pylab.show()
     
-def intersectPt(p1, d1, p2, d2):
-    print 'fill me in!'

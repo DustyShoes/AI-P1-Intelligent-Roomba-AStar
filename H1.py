@@ -28,15 +28,15 @@ class ReflexRobot(RealisticRobot):
       self.action = ('Forward',None)
 
 room = RectangularRoom(20,20)
-#room.occupied = zip(range(3,17), [10] * 13)
+room.setWall((5,2), (15,20))
 
-print runSimulation(num_robots = 1,
+print(runSimulation(num_robots = 1,
                     speed = 1,
                     min_coverage = 0.2,
                     num_trials = 1,
                     room = room,
                     robot_type = ReflexRobot,
-                    ui_enable = True,
-                    ui_delay = 0.1)
+                    #ui_enable = True,
+                    ui_delay = 0.1))
                     
 
