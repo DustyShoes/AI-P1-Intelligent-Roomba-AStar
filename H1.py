@@ -30,13 +30,13 @@ class ReflexRobot(RealisticRobot):
 room = RectangularRoom(20,20)
 #room.occupied = zip(range(3,17), [10] * 13)
 
-print runSimulation(num_robots = 2,
+print runSimulation(num_robots = 1,
                     speed = 1,
                     min_coverage = 0.2,
-                    num_trials = 10,
+                    num_trials = 1,
                     room = room,
                     robot_type = ReflexRobot,
                     ui_enable = True,
-                    ui_delay = 0.001)
+                    ui_delay = 0.1)
                     
 

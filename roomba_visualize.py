@@ -8,6 +8,7 @@ import time
 
 from Tkinter import *
 
+
 class RobotVisualization:
     def __init__(self, num_robots, room, delay = 0.2):
         "Initializes a visualization with the specified parameters."
@@ -20,10 +21,12 @@ class RobotVisualization:
         self.width = width
         self.height = height
         self.num_robots = num_robots
+        self.paused = False
 
         # Initialize a drawing surface
         self.master = Tk()
         self.w = Canvas(self.master, width=500, height=500)
+        self.master.bind("<Key>", self.key)
         self.w.pack()
         self.master.update()
 
@@ -72,8 +75,12 @@ class RobotVisualization:
     def _status_string(self, time, num_clean_tiles):
         "Returns an appropriate status string to print."
         percent_clean = 100 * num_clean_tiles / (self.width * self.height)
-        return "Time: %04d; %d tiles (%d%%) cleaned" % \
-            (time, num_clean_tiles, percent_clean)
+        if self.paused:
+          pause = 'PAUSED'
+        else:
+          pause = "'p' to pause"
+        return "Time: %04d; %d tiles (%d%%) cleaned     %s" % \
+            (time, num_clean_tiles, percent_clean, pause)
 
     def _map_coords(self, x, y):
         "Maps grid positions to window positions (in pixels)."
@@ -91,6 +98,11 @@ class RobotVisualization:
         x3, y3 = self._map_coords(x + 0.6 * math.sin(math.radians(d2)),
                                   y + 0.6 * math.cos(math.radians(d2)))
         return self.w.create_polygon([x1, y1, x2, y2, x3, y3], fill="red")
+        
+    def key(self,event):
+      if event.char == 'p':
+        print 'Paused'
+        self.paused = not self.paused
 
     def update(self, room, robots):
         "Redraws the visualization with the specified room and robot state."
@@ -123,6 +135,15 @@ class RobotVisualization:
             text=self._status_string(self.time, room.getNumCleanedTiles()))
         self.master.update()
         time.sleep(self.delay)
+        # Loop if pause is enabled
+        if self.paused:
+          self.w.delete(self.text)
+          self.text = self.w.create_text(
+            25, 0, anchor=NW,
+            text=self._status_string(self.time, room.getNumCleanedTiles()))
+          while self.paused:
+            time.sleep(0.1)
+            self.master.update()
 
     def done(self):
         "Indicate that the animation is done so that we allow the user to close the window."
