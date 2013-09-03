@@ -3,7 +3,6 @@ import random
 import copy
 
 import roomba_visualize
-#import pylab
 
 
 REALISTIC_LEAN_MAX = 0.1  # Max degrees per timestep for lean
@@ -393,6 +392,27 @@ class RealisticRobot(Robot):
         
 
 
+def meanstdv(x):
+  """
+  Calculate mean and standard deviation of data x[]:
+      mean = {\sum_i x_i \over n}
+      std = sqrt(\sum_i (x_i - mean)^2 \over n-1)
+  """
+  from math import sqrt
+  if len(x) == 0: 
+    return 99,99
+  elif len(x) == 1:
+    return x[0],0
+  n, mean, std = len(x), 0, 0
+  for a in x:
+    mean = mean + a
+  mean = mean / float(n)
+  for a in x:
+    std = std + (a - mean)**2
+  std = sqrt(std / float(n-1))
+  return mean, std
+
+
 
 def runSimulation(num_robots, speed, min_coverage, num_trials,
                   robot_type, room, ui_enable = False, ui_delay = 0.2):
@@ -413,7 +433,7 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
     ui_enable: set True if TK visualization is needed
     ui_delay: a float (ui_delay > 0) Time to delay between time steps.
     """
-    totaltime = 0
+    results = []
     num = num_trials
     max_steps = 99999.9     # Max number of steps before bailing.  Prevents endless looping.
     while num>0:
@@ -425,16 +445,19 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
         while i>0:
             robots.append(robot_type(curroom, speed))
             i -= 1
-        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and totaltime < max_steps:
+        thistime = 0
+        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thistime < max_steps:
             for robot in robots:
                 robot.updatePositionAndClean()
-            totaltime += 1
+            thistime += 1
             if ui_enable:
                 anim.update(curroom, robots)
                 if anim.quit:
-                  return float(totaltime)/num_trials
+                  totaltime += thistime
+                  return meanstdv(results)
         num -= 1
+        results.append(thistime)
         if ui_enable:
             anim.done()
-    return float(totaltime)/num_trials
+    return meanstdv(results)
     
