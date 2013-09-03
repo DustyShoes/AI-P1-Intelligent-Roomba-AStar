@@ -437,46 +437,4 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
         if ui_enable:
             anim.done()
     return float(totaltime)/num_trials
-
-
-def showPlot1(title, x_label, y_label):
-    """
-    What information does the plot produced by this function tell you?
-    """
-    num_robot_range = range(1, 11)
-    times1 = []
-    times2 = []
-    for num_robots in num_robot_range:
-        print("Plotting", num_robots, "robots...")
-        times1.append(runSimulation(num_robots, 1.0, 20, 20, 0.8, 20, StandardRobot))
-        times2.append(runSimulation(num_robots, 1.0, 20, 20, 0.8, 20, RandomWalkRobot))
-    pylab.plot(num_robot_range, times1)
-    pylab.plot(num_robot_range, times2)
-    pylab.title(title)
-    pylab.legend(('StandardRobot', 'RandomWalkRobot'))
-    pylab.xlabel(x_label)
-    pylab.ylabel(y_label)
-    pylab.show()
-
-    
-def showPlot2(title, x_label, y_label):
-    """
-    What information does the plot produced by this function tell you?
-    """
-    aspect_ratios = []
-    times1 = []
-    times2 = []
-    for width in [10, 20, 25, 50]:
-        height = 300/width
-        print("Plotting cleaning time for a room of width:", width, "by height:", height)
-        aspect_ratios.append(float(width) / height)
-        times1.append(runSimulation(2, 1.0, width, height, 0.8, 200, StandardRobot))
-        times2.append(runSimulation(2, 1.0, width, height, 0.8, 200, RandomWalkRobot))
-    pylab.plot(aspect_ratios, times1)
-    pylab.plot(aspect_ratios, times2)
-    pylab.title(title)
-    pylab.legend(('StandardRobot', 'RandomWalkRobot'))
-    pylab.xlabel(x_label)
-    pylab.ylabel(y_label)
-    pylab.show()
     
