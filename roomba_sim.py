@@ -124,7 +124,6 @@ class RectangularRoom(object):
       dx = (x2 - x1)
       dy = (y2 - y1)
       m = dy / dx   # slope
-      print "slope: " + str(m)
       b = y1 - x1 * m
       x = x1
       (lx,ly) = (x1,x2)
@@ -152,12 +151,15 @@ class RectangularRoom(object):
         return len(self.cleaned)
 
     def getRandomPosition(self):
-        """ Return a random position inside the room.
-        returns: a Position object.
+        """ Return a random unoccupied position inside the room.
+        returns: a Position object. 
         """
-        x = random.choice(range(self.width))
-        y = random.choice(range(self.height))
-        pos = Position(x,y)
+        while True:
+          x = random.choice(range(self.width))
+          y = random.choice(range(self.height))
+          pos = Position(x,y)
+          if self.isPositionInRoom(pos):
+            break
         return pos
 
     def isPositionInRoom(self, pos):
@@ -248,7 +250,7 @@ class Robot(object):
         # Valid percepts (['Bump',None],['Dirty',None])
         self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
         self.actions = (None,None) 
-          # Valid actions (['TurnLeft', 'TurnRight', 'Forward', 'Reverse', 'Suck'],
+          # Valid actions (['TurnLeft', 'TurnRight', 'Forward', 'Suck'],
                     #    <turn amount in degrees, speed forward/back [0..100]>)
                     #    None is default (90 degrees or 100 percent)
         
@@ -273,7 +275,6 @@ class Robot(object):
         elif act == 'Suck':
             self.robot.room.cleanTileAtPosition(self.robot.pos)
             self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            self.robot.last = 'Suck'
         elif act == 'Forward':
             if not amt:
                 amt = 100.0
@@ -314,10 +315,64 @@ class Robot(object):
     def getRobotDirection(self):
       return self.robot.getRobotDirection()
       
+class DiscreteRobot(object):
+    """ This class of robot lives in a discrete world where valid movement actions
+    are North, South, East, and West.  Robot heading does not matter.  The Suck
+    action will suck dirt from the current square. """
+    def __init__(self,room,speed):
+        self.robot = RobotBase(room,speed)
+        # Valid percepts (['Bump',None],['Dirty',None])
+        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
+        self.actions = (None) 
+          # Valid actions ['North', 'South', 'East', 'West', 'Suck']
+        
+    def updatePositionAndClean(self):
+        # use percepts set up during last action
+        self.runRobot()
+        # Do actions ['North', 'South', 'East', 'West', 'Suck']
+        (act) = self.action
+        if act == 'Suck':
+            self.robot.room.cleanTileAtPosition(self.robot.pos)
+            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+            return
+        elif act == 'North':
+            newpos = self.robot.pos.getNewPosition(0, self.robot.speed)
+        elif act == 'South':
+            newpos = self.robot.pos.getNewPosition(180, self.robot.speed)
+        elif act == 'East':
+            newpos = self.robot.pos.getNewPosition(90, self.robot.speed)
+        elif act == 'West':
+            newpos = self.robot.pos.getNewPosition(270, self.robot.speed)
+        else:
+          raise ValueError("Unknown action: " + act)
+            
+        if self.robot.room.isPositionInRoom(newpos) :
+          # Assume the floor is clear between here and there
+          self.robot.pos = newpos
+          self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        else:
+          # Robot doesn't move
+          self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))           
+        
+    def runRobot(self):
+      """ User needs to fill in the function.
+          Use class member variables to determine next action
+          Place action in self.action
+      """
+      raise NotImplementedError
+        
+    def getRobotPosition(self):
+      return self.robot.getRobotPosition()
+      
+    def getRobotDirection(self):
+      return self.robot.getRobotDirection()
+
+      
 class RealisticRobot(Robot):
     """
     Same as Robot, but with some realistic error.
-    Introduces error when moving to simulate carpet, inconsistent battery, etc.
+    Introduces error when moving to simulate a slow motor and
+    occasional loss of traction (marbles).
     """
     def __init__(self,room,speed):
       """ Use Robot's init, but set a left/right lean
