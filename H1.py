@@ -155,7 +155,7 @@ def reflexTest():
                     #robot_type = RandomReflex,
                     #robot_type = ReflexRobotState,
                     start_location = (5,5),
-                    #ui_enable = True,
+                    ui_enable = True,
                     ui_delay = 0.001))
                   
 
@@ -163,7 +163,7 @@ def reflexTest():
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
   #discreteTest()
-  #reflexTest()
-  testAllMaps(ReflexRobot, allRooms, 2, (5,5))
+  reflexTest()
+  #testAllMaps(ReflexRobot, allRooms, 2, (5,5))
   #testAllMaps(RandomReflex, allRooms, 2,(5,5))
   #testAllMaps(RandomDiscrete, allRooms, 20, (5,5))

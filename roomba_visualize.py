@@ -119,14 +119,14 @@ class RobotVisualization:
         # Draw new robots - This creates flicker if lots of robots
         self.robots = []
         for robot in robots:
-            pos = robot.getRobotPosition()
+            pos = robot.robot.getRobotPosition()
             x, y = pos.getX(), pos.getY()
             x1, y1 = self._map_coords(x - 0.2, y - 0.2)
             x2, y2 = self._map_coords(x + 0.2, y + 0.2)
             self.robots.append(self.w.create_oval(x1, y1, x2, y2,
                                                   fill = "black"))
             self.robots.append(
-                self._draw_robot(robot.getRobotPosition(), robot.getRobotDirection()))
+                self._draw_robot(robot.robot.getRobotPosition(), robot.robot.getRobotDirection()))
         # Update text
         self.w.delete(self.text)
         self.time += 1
