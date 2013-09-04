@@ -1,3 +1,10 @@
+# roomba_sim.py
+# Author: Paul Talaga
+#
+# This file provides classes and functions to simulate a Roomba-style robot in GUI and
+# batch modes.  See H1.py for example robots and how these functions/classes can be 
+# used.
+
 import math
 import random
 import copy
@@ -9,6 +16,10 @@ REALISTIC_LEAN_MAX = 0.1  # Max degrees per timestep for lean
 REALISTIC_MARBLE_PROBABILITY = 0.01  # Prob of a marble being hit in a timestep
 REALISTIC_MARBLE_MAX = 10  # How much the marble rotates the robot
 EDGE_REFINEMENT_STEPS = 4
+
+MAX_STEPS_IN_SIMULATION = 99999  # Number of time steps to allow a robot to clean a room
+                                # before we give up.  Prevents runaway robots who can't
+                                # clean.
 
 class Position(object):
     """
@@ -179,11 +190,22 @@ class RectangularRoom(object):
     def getHeight(self):
       """   Returns the height of the room. """
       return self.height
+      
+    def getWalls(self):
+      """ Returns a list of all immovible cells in the room.  
+      Each location is a tuple (x,y)"""
+      return copy.deepcopy(self.occupied) # return a copy so you can't change it!
+      
+    def getCleaned(self):
+      """ Returns a list of all cleaned cells in the room.
+      Each location is a tuple (x,y)"""
+      return copy.deepcopy(self.cleaned) # return a copy so you can't change it!
 
 
 class RobotBase(object):
     """
-    Represents a robot cleaning a particular room.
+    A common robot object that contains details of the robot that an agent program
+    should not have access too, thus we hide it as best as possible.
 
     At all times the robot has a particular position and direction in the room.
     The robot also has a fixed speed.
@@ -191,19 +213,26 @@ class RobotBase(object):
     Subclasses of Robot should provide movement strategies by implementing
     updatePositionAndClean(), which simulates a single time-step.
     """
-    def __init__(self, room, speed):
+    def __init__(self, room, speed, start_location = -1):
         """
         Initializes a Robot with the given speed in the specified room. The
         robot initially has a random direction and a random position in the
-        room. The robot cleans the tile it is on.
+        room, unless a start_location (x,y) is given.  In that case the robot faces
+        east.
         room:  a RectangularRoom object.
         speed: a float (speed > 0)  Using a speed > 1 will cause the robot to 
           jump over squares!
+        start_location: a tuple (x,y) where the robot should start.  Default 
+          direction is East (90.0 degrees)
         """
-        self.dir = int(360 * random.random())
-        self.pos = Position(room.width * random.random(),room.height * random.random())
+        if start_location == -1:
+          self.pos = room.getRandomPosition()
+          self.dir = int(360 * random.random())
+        else:
+          x,y = start_location
+          self.pos = Position(x,y)
+          self.dir = 90.0
         self.room = room
-        self.room.cleanTileAtPosition(self.pos)
         self.last = None
         if speed > 0:
             self.speed = speed
@@ -231,7 +260,7 @@ class RobotBase(object):
 
     def setRobotDirection(self, direction):
         """ Set the direction of the robot to DIRECTION.
-          direction: integer representing an angle in degrees
+          direction: number representing an angle in degrees
         """
         self.dir = direction
 
@@ -240,12 +269,25 @@ class RobotBase(object):
           Move the robot to a new position and mark the tile as needed.
         """
         raise NotImplementedError # don't change this!
+        
+    def getWalls(self):
+      """ Returns a list of immovable object in the environment  (x,y)"""
+      return self.room.getWalls()
+      
+    def getCleaned(self):
+      """ Returns a list of cleaned locations in the environment (x,y)"""
+      return self.room.getCleaned()
 
 
            
-class Robot(object):
-    def __init__(self,room,speed):
-        self.robot = RobotBase(room,speed)
+class ContinuousRobot(object):
+    """ This class of robot lives in a continuous world where the robot can turn in any
+    direction ('TurnLeft' or 'TurnRight') any number of degrees, go 'Forward' at some 
+    speed (100 is full step distance), or 'Suck' dirt.  
+    Deterministic environment.
+    """
+    def __init__(self,room,speed, start_location = -1):
+        self.robot = RobotBase(room, speed, start_location)
         # Valid percepts (['Bump',None],['Dirty',None])
         self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
         self.actions = (None,None) 
@@ -257,6 +299,7 @@ class Robot(object):
         # use percepts set up during last action
         self.runRobot()
         # Do actions ['TurnLeft','TurnRight','Forward','Reverse','Suck']
+        # amt is degrees of turn in that direction of speed of forward 0..100
         (act, amt) = self.action
         
         if act == 'TurnLeft':
@@ -308,18 +351,15 @@ class Robot(object):
       """
       raise NotImplementedError
         
-    def getRobotPosition(self):
-      return self.robot.getRobotPosition()
-      
-    def getRobotDirection(self):
-      return self.robot.getRobotDirection()
       
 class DiscreteRobot(object):
     """ This class of robot lives in a discrete world where valid movement actions
     are North, South, East, and West.  Robot heading does not matter.  The Suck
-    action will suck dirt from the current square. """
-    def __init__(self,room,speed):
-        self.robot = RobotBase(room,speed)
+    action will suck dirt from the current square. 
+    Deterministic
+    """
+    def __init__(self,room,speed, start_location = -1):
+        self.robot = RobotBase(room,speed, start_location)
         # Valid percepts (['Bump',None],['Dirty',None])
         self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
         self.actions = (None) 
@@ -362,16 +402,19 @@ class DiscreteRobot(object):
         
     def getRobotPosition(self):
       return self.robot.getRobotPosition()
+    
+    def getWalls(self):
+      return self.robot.getWalls()
       
-    def getRobotDirection(self):
-      return self.robot.getRobotDirection()
-
+    def getCleaned(self):
+      return self.robot.getCleaned()
       
-class RealisticRobot(Robot):
+class RealisticRobot(ContinuousRobot):
     """
-    Same as Robot, but with some realistic error.
+    Same as ContinuousRobot, but with some realistic error.
+    This makes the environment  non-deterministic (stochastic)
     Introduces error when moving to simulate a slow motor and
-    occasional loss of traction (marbles).
+    occasional loss of traction (hit a marble).
     """
     def __init__(self,room,speed):
       """ Use Robot's init, but set a left/right lean
@@ -415,9 +458,10 @@ def meanstdv(x):
 
 
 def runSimulation(num_robots, speed, min_coverage, num_trials,
-                  robot_type, room, ui_enable = False, ui_delay = 0.2):
+                  robot_type, room, ui_enable = False, ui_delay = 0.2,
+                  start_location = -1, debug = False):
     """
-    Runs NUM_TRIALS trials of the simulation and returns the mean number of
+    Runs NUM_TRIALS trials of the simulation and returns the (mean, std) number of
     time-steps needed to clean the fraction MIN_COVERAGE of the room.
 
     The simulation is run with NUM_ROBOTS robots of type ROBOT_TYPE, each with
@@ -432,32 +476,61 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
                 RandomWalkRobot)
     ui_enable: set True if TK visualization is needed
     ui_delay: a float (ui_delay > 0) Time to delay between time steps.
+    start_location: (x,y) a pair representing the starting position of the robot
+                facing East.  Assumed to be in the environment.  
+                Default is random placement.
     """
-    results = []
-    num = num_trials
-    max_steps = 99999.9     # Max number of steps before bailing.  Prevents endless looping.
-    while num>0:
+    results = []  # store per trial results for later analysis
+    while num_trials>0:
         curroom = copy.deepcopy(room) # copy room since we change it
         if ui_enable:
             anim = roomba_visualize.RobotVisualization(num_robots, curroom, delay=ui_delay)
         i = num_robots
         robots= []
         while i>0:
-            robots.append(robot_type(curroom, speed))
+            robots.append(robot_type(curroom, speed, start_location))
             i -= 1
         thistime = 0
-        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thistime < max_steps:
+        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thistime < MAX_STEPS_IN_SIMULATION:
             for robot in robots:
                 robot.updatePositionAndClean()
             thistime += 1
             if ui_enable:
                 anim.update(curroom, robots)
                 if anim.quit:
-                  totaltime += thistime
+                  results.append(thistime)
                   return meanstdv(results)
-        num -= 1
+        num_trials -= 1
+        if debug: print thistime
         results.append(thistime)
         if ui_enable:
             anim.done()
     return meanstdv(results)
+    
+def testAllMaps(robot, rooms, numtrials = 10, start_location = -1):
+  """ Runs the specified robot over the list of rooms, optionally with a specified
+  number of trials per map, and starting location (x,y).
+  Prints status to the screen and returns the average performance over all maps and 
+  trials."""
+  score = 0
+  i = 0
+  for room in rooms:
+    runscore, runstd = runSimulation(num_robots = 1,
+                    speed = 1,
+                    min_coverage = 0.95,
+                    num_trials = numtrials,
+                    room = room,
+                    robot_type = robot,
+                    start_location = start_location,
+                    #debug = True,
+                    ui_enable = False)
+    score += runscore
+    print("Room %d of %d done (score: %d std: %d)" % (i+1, len(rooms), runscore, runstd))
+    i = i + 1
+  print("Average score over %d trials: %d" % (numtrials * len(rooms), score / len(rooms)))
+  return score / len(rooms)
+  
+# Print text if this file was run on its own.  
+if __name__ == "__main__":
+   print("No example robots implemented.  See H1.py for examples of usage.")
     

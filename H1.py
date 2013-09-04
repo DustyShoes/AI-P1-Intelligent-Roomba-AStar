@@ -1,10 +1,27 @@
-#
+# H1.py
+# Author: Paul Talaga
+# 
+# This file demonstrates how to implement various kinds of Roomba robot agents
+# and run them in GUI or non-gui mode using the roomba_sim library.
 #
 
 from roomba_sim import *
 
+# Each robot below should be a subclass of ContinuousRobot, RealisticRobot, or DiscreteRobot.
+# All robots need to implement the runrobot(self) member function, as this is where
+# you will define that specific robot's characteristics.
+
+# All robots perceive their environment through self.percepts (a class variable) and 
+# act on it through self.action.  The specific percepts received and actions allowed
+# are specific to the superclass.  See roomba_sim for details.
+
+# ContinuousRobot - Deterministic continuous environment - Same percepts/actions as
+#                     RealisticRobot
+# RealisticRobot  - Non-deterministic continuous environment - Same percepts/actions as
+#                     ContinuousRobot
+# DiscreteRobot   - Deterministic discrete environment
         
-class ReflexRobot(Robot):
+class ReflexRobot(ContinuousRobot):
 #class ReflexRobot(RealisticRobot):
   """ A ReflexRobot is a robot that uses the current percept (self.percept)
     and produces an action (self.action) without any knowledge of it's
@@ -19,18 +36,20 @@ class ReflexRobot(Robot):
     (bstate, dirt) = self.percepts
     # This implements the transition function.  Order matters!
     if(bstate == 'Bump'):
-      self.action = ('TurnLeft',95)
+      self.action = ('TurnLeft',90)
     elif(dirt == 'Dirty'):
       self.action = ('Suck',None)
     else:
       self.action = ('Forward',None)
       
-class RandomReflex(Robot):
+      
+      
+class RandomReflex(ContinuousRobot):
   def runRobot(self):
     (bstate, dirt) = self.percepts
     # This implements the transition function.  Order matters!
     if(bstate == 'Bump'):
-      self.action = ('TurnLeft',random.random() * 90 + 90)
+      self.action = ('TurnLeft',random.random() * 10 + 45)
     elif(dirt == 'Dirty'):
       self.action = ('Suck',None)
     else:
@@ -38,13 +57,13 @@ class RandomReflex(Robot):
 
 
 
-class ReflexRobotState(Robot):
+class ReflexRobotState(ContinuousRobot):
 #class ReflexRobotState(RealisticRobot):
   """ The ReflexRobotState robot is similar to the ReflexRobot, but
     state is allowed.
   """
-  def __init__(self,room,speed):
-    super(ReflexRobotState, self).__init__(room,speed)
+  def __init__(self,room,speed, start_location = -1):
+    super(ReflexRobotState, self).__init__(room,speed, start_location)
     # Set initial state here
     self.state = 0
     
@@ -65,6 +84,7 @@ class ReflexRobotState(Robot):
       self.action = ('Forward',None)
       self.state = self.state + 1
 
+
 class RandomDiscrete(DiscreteRobot):
   """ RandomDiscrete is a robot that simply shows the use of random
     actions in a discrete world.
@@ -82,7 +102,7 @@ allRooms = []
 smallEmptyRoom = RectangularRoom(10,10)
 allRooms.append(smallEmptyRoom)  # [0]
 
-largeEmptyRoom = RectangularRoom(50,50)
+largeEmptyRoom = RectangularRoom(10,10)
 allRooms.append(largeEmptyRoom) # [1]
 
 mediumWalls1Room = RectangularRoom(30,30)
@@ -129,34 +149,21 @@ def reflexTest():
   print(runSimulation(num_robots = 1,
                     speed = 1,
                     min_coverage = 0.95,
-                    num_trials = 1,
+                    num_trials = 10,
                     room = allRooms[5],
-                    #robot_type = ReflexRobot,
+                    robot_type = ReflexRobot,
                     #robot_type = RandomReflex,
-                    robot_type = ReflexRobotState,
-                    ui_enable = True,
-                    ui_delay = 0.1))
+                    #robot_type = ReflexRobotState,
+                    start_location = (5,5),
+                    #ui_enable = True,
+                    ui_delay = 0.001))
                   
-def testAllMaps(robot, numtrials = 10):
-  score = 0
-  i = 0
-  for room in allRooms:
-    runscore = runSimulation(num_robots = 1,
-                    speed = 1,
-                    min_coverage = 0.95,
-                    num_trials = numtrials,
-                    room = room,
-                    robot_type = robot,
-                    ui_enable = False,
-                    ui_delay = 0.1)
-    score += runscore
-    print("Room %d of %d done (%d)" % (i+1, len(allRooms),runscore))
-    i = i + 1
-  print("Average score over %d trials: %d" % (numtrials * len(allRooms), score / len(allRooms)))
-  return score / len(allRooms)
+
                     
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
   #discreteTest()
-  reflexTest()
-  #testAllMaps(RandomReflex, 2)
+  #reflexTest()
+  testAllMaps(ReflexRobot, allRooms, 2, (5,5))
+  #testAllMaps(RandomReflex, allRooms, 2,(5,5))
+  #testAllMaps(RandomDiscrete, allRooms, 20, (5,5))
