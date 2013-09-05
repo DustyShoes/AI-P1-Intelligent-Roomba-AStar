@@ -279,16 +279,15 @@ class RobotBase(object):
     def getCleaned(self):
       """ Returns a list of cleaned locations in the environment (x,y)"""
       return self.room.getCleaned()
-
-
-           
+          
 class ContinuousRobot(object):
     """ This class of robot lives in a continuous world where the robot can turn in any
     direction ('TurnLeft' or 'TurnRight') any number of degrees, go 'Forward' at some 
     speed (100 is full step distance), or 'Suck' dirt.  
     Deterministic environment.
     """
-    def __init__(self,room,speed, start_location = -1):
+    def __init__(self,room,speed, start_location = -1, chromosome = None):
+        self.initialize(chromosome)
         self.robot = RobotBase(room, speed, start_location)
         # Valid percepts (['Bump',None],['Dirty',None])
         self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
@@ -296,6 +295,9 @@ class ContinuousRobot(object):
           # Valid actions (['TurnLeft', 'TurnRight', 'Forward', 'Suck'],
                     #    <turn amount in degrees, speed forward/back [0..100]>)
                     #    None is default (90 degrees or 100 percent)
+
+    def initialize(self, chromosome):
+      """ A hook called during __init__ """
         
     def updatePositionAndClean(self):
         # use percepts set up during last action
@@ -351,8 +353,7 @@ class ContinuousRobot(object):
           Use class member variables to determine next action
           Place action in self.action
       """
-      raise NotImplementedError
-        
+      raise NotImplementedError       
       
 class DiscreteRobot(object):
     """ This class of robot lives in a discrete world where valid movement actions
@@ -360,12 +361,16 @@ class DiscreteRobot(object):
     action will suck dirt from the current square. 
     Deterministic
     """
-    def __init__(self,room,speed, start_location = -1):
+    def __init__(self,room,speed, start_location = -1, chromosome = None):
+        self.initialize(chromosome)
         self.robot = RobotBase(room,speed, start_location)
         # Valid percepts (['Bump',None],['Dirty',None])
         self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
         self.actions = (None) 
           # Valid actions ['North', 'South', 'East', 'West', 'Suck']
+
+    def initialize(self, chromosome):
+        """ A hook called during __init__ """
         
     def updatePositionAndClean(self):
         # use percepts set up during last action
@@ -418,10 +423,10 @@ class RealisticRobot(ContinuousRobot):
     Introduces error when moving to simulate a slow motor and
     occasional loss of traction (hit a marble).
     """
-    def __init__(self,room,speed):
+    def __init__(self, room, speed, chromosome = None):
       """ Use Robot's init, but set a left/right lean
       """
-      super(RealisticRobot, self).__init__(room,speed)
+      super(RealisticRobot, self).__init__(room, speed, chromosome = chromosome)
       self.lean = random.random() * REALISTIC_LEAN_MAX * 2 - REALISTIC_LEAN_MAX
       
     def updatePositionAndClean(self):
@@ -461,7 +466,7 @@ def meanstdv(x):
 
 def runSimulation(num_robots, speed, min_coverage, num_trials,
                   robot_type, room, ui_enable = False, ui_delay = 0.2,
-                  start_location = -1, debug = False):
+                  start_location = -1, debug = False, chromosome = None):
     """
     Runs NUM_TRIALS trials of the simulation and returns the (mean, std) number of
     time-steps needed to clean the fraction MIN_COVERAGE of the room.
@@ -490,7 +495,7 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
         i = num_robots
         robots= []
         while i>0:
-            robots.append(robot_type(curroom, speed, start_location))
+            robots.append(robot_type(curroom, speed, start_location, chromosome))
             i -= 1
         thistime = 0
         while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thistime < MAX_STEPS_IN_SIMULATION:
@@ -509,7 +514,7 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
             anim.done()
     return meanstdv(results)
     
-def testAllMaps(robot, rooms, numtrials = 10, start_location = -1):
+def testAllMaps(robot, rooms, numtrials = 10, start_location = -1, chromosome = None):
   """ Runs the specified robot over the list of rooms, optionally with a specified
   number of trials per map, and starting location (x,y).
   Prints status to the screen and returns the average performance over all maps and 
@@ -525,6 +530,7 @@ def testAllMaps(robot, rooms, numtrials = 10, start_location = -1):
                     robot_type = robot,
                     start_location = start_location,
                     #debug = True,
+                    chromosome = chromosome,
                     ui_enable = False)
     score += runscore
     print("Room %d of %d done (score: %d std: %d)" % (i+1, len(rooms), runscore, runstd))

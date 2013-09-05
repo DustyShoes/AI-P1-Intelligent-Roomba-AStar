@@ -27,6 +27,9 @@ class ReflexRobot(ContinuousRobot):
     and produces an action (self.action) without any knowledge of it's
     position, the configuration of the environment, or memory.
   """
+  def initialize(self, chromosome):
+    self.degrees = chromosome
+
   def runRobot(self):
     """ runRobot gets called once per timestep.  Based on the current percept
       (self.percept) (bstate, dirt) where bstate is 'Bump' or None and
@@ -36,7 +39,7 @@ class ReflexRobot(ContinuousRobot):
     (bstate, dirt) = self.percepts
     # This implements the transition function.  Order matters!
     if(bstate == 'Bump'):
-      self.action = ('TurnLeft',90)
+      self.action = ('TurnLeft', self.degrees)
     elif(dirt == 'Dirty'):
       self.action = ('Suck',None)
     else:
@@ -156,14 +159,15 @@ def reflexTest():
                     #robot_type = ReflexRobotState,
                     start_location = (5,5),
                     ui_enable = True,
+                    chromosome = 127,
                     ui_delay = 0.001))
-                  
 
-                    
+
+
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
   #discreteTest()
-  reflexTest()
-  #testAllMaps(ReflexRobot, allRooms, 2, (5,5))
-  #testAllMaps(RandomReflex, allRooms, 2,(5,5))
-  #testAllMaps(RandomDiscrete, allRooms, 20, (5,5))
+  #reflexTest()
+  testAllMaps(ReflexRobot, allRooms, 2, (5,5), 90)
+  testAllMaps(RandomReflex, allRooms, 2,(5,5))
+  testAllMaps(RandomDiscrete, allRooms, 20, (5,5))
