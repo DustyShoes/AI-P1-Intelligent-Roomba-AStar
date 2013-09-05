@@ -3,7 +3,10 @@
 import math
 import time
 
-from tkinter import *
+try:    # Why do they have to change names?  Is there a better way to do this?
+  from tkinter import *
+except ImportError:
+  from Tkinter import *
 
 
 class RobotVisualization:
