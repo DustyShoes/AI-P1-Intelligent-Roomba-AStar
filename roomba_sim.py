@@ -124,9 +124,11 @@ class RectangularRoom(object):
       immovable object.  Assumes m,n is in room."""
       return (m,n) in self.occupied
       
-    def setWall(self, (x1,y1), (x2,y2)):
+    def setWall(self, x1_y1, x2_y2):
       """ Draws a wall from (x1,y1) to (x2,y2) 
         Will widen wall so robot can't jump over."""
+      x1, y1 = x1_y1
+      x2, y2 = x2_y2
       if x1 > x2: # make sure x1 < x2
         (x1,y1,x2,y2) = (x2,y2,x1,y1)
       if x2 - x1 == 0:
@@ -501,7 +503,7 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
                   results.append(thistime)
                   return meanstdv(results)
         num_trials -= 1
-        if debug: print thistime
+        if debug: print(thistime)
         results.append(thistime)
         if ui_enable:
             anim.done()
