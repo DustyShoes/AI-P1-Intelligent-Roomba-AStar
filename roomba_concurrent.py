@@ -21,14 +21,14 @@ class SimulationProcess(Process):
 
     def run(self):
         result = runSimulation(num_robots = 1,
-                    speed = 1,
-                    min_coverage = 0.95,
-                    num_trials = self.num_trials,
-                    room = self.room,
-                    robot_type = self.robot,
-                    start_location = self.start_location,
-                    chromosome = self.chromosome,
-                    ui_enable = False)
+                               speed = 1,
+                               min_coverage = 0.95,
+                               num_trials = self.num_trials,
+                               room = self.room,
+                               robot_type = self.robot,
+                               start_location = self.start_location,
+                               chromosome = self.chromosome,
+                               ui_enable = False)
         self.dict[self.num] = result
     #end run
     
