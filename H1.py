@@ -6,6 +6,7 @@
 #
 
 from roomba_sim import *
+from roomba_concurrent import *
 
 # Each robot below should be a subclass of ContinuousRobot, RealisticRobot, or DiscreteRobot.
 # All robots need to implement the runrobot(self) member function, as this is where
@@ -159,15 +160,21 @@ def reflexTest():
                     #robot_type = ReflexRobotState,
                     start_location = (5,5),
                     ui_enable = True,
-                    chromosome = 127,
+                    chromosome = 90,
                     ui_delay = 0.001))
 
-
+import time
 
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
   #discreteTest()
   #reflexTest()
-  testAllMaps(ReflexRobot, allRooms, 2, (5,5), 90)
-  testAllMaps(RandomReflex, allRooms, 2,(5,5))
-  testAllMaps(RandomDiscrete, allRooms, 20, (5,5))
+  
+  # Concurrent test execution.
+  concurrent_test(ReflexRobot, allRooms, 5, (5, 5), 90)
+
+  # Sequential test execution.
+  #testAllMaps(ReflexRobot, allRooms, 5, (5,5), 90)
+
+  #testAllMaps(RandomReflex, allRooms, 2,(5,5))
+  #testAllMaps(RandomDiscrete, allRooms, 20, (5,5))
