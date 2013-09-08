@@ -168,10 +168,10 @@ import time
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
   #discreteTest()
-  #reflexTest()
+  reflexTest()
   
   # Concurrent test execution.
-  concurrent_test(ReflexRobot, allRooms, 5, (5, 5), 90)
+  #concurrent_test(ReflexRobot, allRooms, 5, (5, 5), 90)
 
   # Sequential test execution.
   #testAllMaps(ReflexRobot, allRooms, 5, (5,5), 90)
