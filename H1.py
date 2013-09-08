@@ -163,7 +163,6 @@ def reflexTest():
                     chromosome = 90,
                     ui_delay = 0.001))
 
-import time
 
 if __name__ == "__main__":
   # This code will be run if this file is called on its own

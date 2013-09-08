@@ -70,4 +70,5 @@ def concurrent_test(robot, rooms, num_trials, start_location = -1, chromosome = 
     #end for
     
     print("Average score over %d trials: %d" % (total_trials, total_score / num_rooms))
+    return total_score / num_rooms
 #end concurrent_test
