@@ -273,13 +273,56 @@ class ContinuousRobot(object):
         self.robot = RobotBase(room, speed, start_location)
         # Valid percepts (['Bump',None],['Dirty',None])
         self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
-        self.actions = (None,None) 
+        #self.actions = (None,None) 
           # Valid actions (['TurnLeft', 'TurnRight', 'Forward', 'Suck'],
                     #    <turn amount in degrees, speed forward/back [0..100]>)
                     #    None is default (90 degrees or 100 percent)
 
+        # actions dictionary
+        self.actions = {}
+        self.actions['TurnLeft'] = self.turnLeft
+        self.actions['TurnRight'] = self.turnRight
+        self.actions['Suck'] = self.suck
+        self.actions['Forward'] = self.forward
+
     def initialize(self, chromosome):
       """ A hook called during __init__ """
+
+    def turnLeft(self, amt):
+        # Will reset bump
+        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        self.robot.dir = int(self.robot.dir - amt % 360)
+
+    def turnRight(self, amt):
+        # Will reset bump
+        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        self.robot.dir = int(self.robot.dir + amt % 360)
+
+    def suck(self, amt):
+        self.robot.room.cleanTileAtPosition(self.robot.pos)
+        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+
+    def forward(self, amt):
+        newpos = self.robot.getNewPosition(self.robot.dir, self.robot.speed * amt / 100.0)
+        if self.robot.room.isPositionInRoom(newpos) :
+            # Assume the floor is clear between here and there
+            self.robot.pos = newpos
+            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        else:
+            # Can't take a full step, so lets try to get close
+            mindist = 0
+            maxdist = self.robot.speed * amt / 100.0
+            for i in xrange(EDGE_REFINEMENT_STEPS):
+              # maxdist is too far, halfway
+              p1 = self.robot.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
+              if self.robot.room.isPositionInRoom(p1):
+                mindist = (maxdist - mindist) * 1.0/2 + mindist
+                newpos = p1 # save better point
+              else:
+                maxdist = (maxdist - mindist) * 1.0/2 + mindist
+                newpos = self.robot.getNewPosition(self.robot.dir, mindist)
+            self.robot.pos = newpos
+            self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))
         
     def updatePositionAndClean(self):
         # use percepts set up during last action
@@ -288,44 +331,15 @@ class ContinuousRobot(object):
         # amt is degrees of turn in that direction of speed of forward 0..100
         (act, amt) = self.action
 
+        # set default amount
         if not amt:
           amt = 90.0
         
-        if act == 'TurnLeft':
-            # Will reset bump
-            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            self.robot.dir = int(self.robot.dir - amt % 360)
-        elif act == 'TurnRight':
-            # Will reset bump
-            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            self.robot.dir = int(self.robot.dir + amt % 360)
-        elif act == 'Suck':
-            self.robot.room.cleanTileAtPosition(self.robot.pos)
-            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-        elif act == 'Forward':
-            newpos = self.robot.getNewPosition(self.robot.dir, self.robot.speed * amt / 100.0)
-            if self.robot.room.isPositionInRoom(newpos) :
-                # Assume the floor is clear between here and there
-                self.robot.pos = newpos
-                self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            else:
-                # Can't take a full step, so lets try to get close
-                mindist = 0
-                maxdist = self.robot.speed * amt / 100.0
-                for i in xrange(EDGE_REFINEMENT_STEPS):
-                  # maxdist is too far, halfway
-                  p1 = self.robot.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
-                  if self.robot.room.isPositionInRoom(p1):
-                    mindist = (maxdist - mindist) * 1.0/2 + mindist
-                    newpos = p1 # save better point
-                  else:
-                    maxdist = (maxdist - mindist) * 1.0/2 + mindist
-                    newpos = self.robot.getNewPosition(self.robot.dir, mindist)
-                self.robot.pos = newpos
-                self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))
-        else:
+        # perform action via dictionary lookup (hackerish way to reproduce case-statement)
+        try:
+          self.actions[act](amt)
+        except KeyError:
           raise ValueError("Unknown action: " + act)
-            
         
     def runRobot(self):
       """ User needs to fill in the function.
