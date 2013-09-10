@@ -517,7 +517,6 @@ def testAllMaps(robot, rooms, numtrials = 10, start_location = -1, chromosome = 
   Prints status to the screen and returns the average performance over all maps and 
   trials."""
   score = 0
-  i = 0
   for room in rooms:
     runscore, runstd = runSimulation(num_robots = 1,
                     speed = 1,
@@ -530,8 +529,7 @@ def testAllMaps(robot, rooms, numtrials = 10, start_location = -1, chromosome = 
                     chromosome = chromosome,
                     ui_enable = False)
     score += runscore
-    print("Room %d of %d done (score: %d std: %d)" % (i+1, len(rooms), runscore, runstd))
-    i = i + 1
+    print("Room %d of %d done (score: %d std: %d)" % (rooms.index(room)+1, len(rooms), runscore, runstd))
   print("Average score over %d trials: %d" % (numtrials * len(rooms), score / len(rooms)))
   return score / len(rooms)
   
