@@ -81,7 +81,7 @@ class RectangularRoom(object):
         """
         self.width = width
         self.height = height
-        self.cleaned = []   # Binary dirt state
+        self.cleaned = {}   # Binary dirt state
         self.occupied = []  # Binary occupation 
 
     def cleanTileAtPosition(self, pos):
@@ -93,8 +93,8 @@ class RectangularRoom(object):
         """
         x = math.floor(pos.getX())
         y = math.floor(pos.getY())
-        if (x,y) not in self.cleaned:
-            self.cleaned.append((x,y))
+        if not self.cleaned.get((x,y), False):
+            self.cleaned[(x,y)] = True
             
     def tileStateAtPosition(self,pos):
         """
@@ -105,7 +105,7 @@ class RectangularRoom(object):
         """
         x = math.floor(pos.getX())
         y = math.floor(pos.getY())
-        if (x,y) in self.cleaned:
+        if self.cleaned.get((x,y), False):
             return None
         else:
             return 'Dirty'
@@ -117,7 +117,7 @@ class RectangularRoom(object):
         n: an integer
         returns: True if (m, n) is cleaned, False otherwise
         """
-        return (m,n) in self.cleaned
+        return self.cleaned.get((m,n), False)
         
     def isTileOccupied(self, m, n):
       """ Returns True if the tile (m, n) is occupied by an 
