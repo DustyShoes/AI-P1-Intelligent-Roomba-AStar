@@ -21,48 +21,6 @@ MAX_STEPS_IN_SIMULATION = 99999  # Number of time steps to allow a robot to clea
                                 # before we give up.  Prevents runaway robots who can't
                                 # clean.
 
-class Position(object):
-    """
-    A Position represents a location in a two-dimensional room.
-    """
-    def __init__(self, x, y):
-        """
-        Initializes a position with coordinates (x, y).
-        """
-        self.x = x
-        self.y = y
-        
-    def getX(self):
-        return self.x
-    
-    def getY(self):
-        return self.y
-    
-    def getNewPosition(self, angle, speed):
-        """
-        Computes and returns the new Position after a single clock-tick has
-        passed, with this object as the current position, and with the
-        specified angle and speed.
-
-        Does NOT test whether the returned position fits inside the room.
-
-        angle: float representing angle in degrees, 0 <= angle < 360
-        speed: positive float representing speed
-
-        Returns: a Position object representing the new position.
-        """
-        old_x, old_y = self.getX(), self.getY()
-        # Compute the change in position
-        delta_y = speed * math.cos(math.radians(angle))
-        delta_x = speed * math.sin(math.radians(angle))
-        # Add that to the existing position
-        new_x = old_x + delta_x
-        new_y = old_y + delta_y
-        return Position(new_x, new_y)   
-
-    def __str__(self):  
-        return "(%0.2f, %0.2f)" % (self.x, self.y)
-
 class RectangularRoom(object):
     """
     A RectangularRoom represents a rectangular region containing clean or dirty
@@ -91,8 +49,9 @@ class RectangularRoom(object):
 
         pos: a Position
         """
-        x = math.floor(pos.getX())
-        y = math.floor(pos.getY())
+        x,y = pos
+        x = math.floor(x)
+        y = math.floor(y)
         if not self.cleaned.get((x,y), False):
             self.cleaned[(x,y)] = True
             
@@ -103,8 +62,9 @@ class RectangularRoom(object):
         
         pos: a Position
         """
-        x = math.floor(pos.getX())
-        y = math.floor(pos.getY())
+        x,y = pos
+        x = math.floor(x)
+        y = math.floor(y)
         if self.cleaned.get((x,y), False):
             return None
         else:
@@ -180,8 +140,9 @@ class RectangularRoom(object):
         pos: a Position object.
         returns: True if pos is in the room, False otherwise.
         """
-        x = math.floor(pos.getX())
-        y = math.floor(pos.getY())
+        x,y = pos
+        x = math.floor(x)
+        y = math.floor(y)
         return (0 <= x < self.width and 0 <= y < self.height
           and not self.occupied.get((x,y), False))
         
@@ -231,8 +192,7 @@ class RobotBase(object):
           self.pos = room.getRandomPosition()
           self.dir = int(360 * random.random())
         else:
-          x,y = start_location
-          self.pos = Position(x,y)
+          self.pos = start_location
           self.dir = 90.0
         self.room = room
         self.last = None
@@ -279,6 +239,28 @@ class RobotBase(object):
     def getCleaned(self):
       """ Returns a list of cleaned locations in the environment (x,y)"""
       return self.room.getCleaned()
+
+    def getNewPosition(self, angle, speed):
+        """
+        Computes and returns the new Position after a single clock-tick has
+        passed, with this object as the current position, and with the
+        specified angle and speed.
+
+        Does NOT test whether the returned position fits inside the room.
+
+        angle: float representing angle in degrees, 0 <= angle < 360
+        speed: positive float representing speed
+
+        Returns: a Position object representing the new position.
+        """
+        old_x, old_y = self.pos
+        # Compute the change in position
+        delta_y = speed * math.cos(math.radians(angle))
+        delta_x = speed * math.sin(math.radians(angle))
+        # Add that to the existing position
+        new_x = old_x + delta_x
+        new_y = old_y + delta_y
+        return (new_x, new_y)   
           
 class ContinuousRobot(object):
     """ This class of robot lives in a continuous world where the robot can turn in any
@@ -321,7 +303,7 @@ class ContinuousRobot(object):
             self.robot.room.cleanTileAtPosition(self.robot.pos)
             self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
         elif act == 'Forward':
-            newpos = self.robot.pos.getNewPosition(self.robot.dir, self.robot.speed * amt / 100.0)
+            newpos = self.robot.getNewPosition(self.robot.dir, self.robot.speed * amt / 100.0)
             if self.robot.room.isPositionInRoom(newpos) :
                 # Assume the floor is clear between here and there
                 self.robot.pos = newpos
@@ -332,13 +314,13 @@ class ContinuousRobot(object):
                 maxdist = self.robot.speed * amt / 100.0
                 for i in xrange(EDGE_REFINEMENT_STEPS):
                   # maxdist is too far, halfway
-                  p1 = self.robot.pos.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
+                  p1 = self.robot.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
                   if self.robot.room.isPositionInRoom(p1):
                     mindist = (maxdist - mindist) * 1.0/2 + mindist
                     newpos = p1 # save better point
                   else:
                     maxdist = (maxdist - mindist) * 1.0/2 + mindist
-                    newpos = self.robot.pos.getNewPosition(self.robot.dir, mindist)
+                    newpos = self.robot.getNewPosition(self.robot.dir, mindist)
                 self.robot.pos = newpos
                 self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))
         else:
@@ -379,13 +361,13 @@ class DiscreteRobot(object):
             self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
             return
         elif act == 'North':
-            newpos = self.robot.pos.getNewPosition(0, self.robot.speed)
+            newpos = self.robot.getNewPosition(0, self.robot.speed)
         elif act == 'South':
-            newpos = self.robot.pos.getNewPosition(180, self.robot.speed)
+            newpos = self.robot.getNewPosition(180, self.robot.speed)
         elif act == 'East':
-            newpos = self.robot.pos.getNewPosition(90, self.robot.speed)
+            newpos = self.robot.getNewPosition(90, self.robot.speed)
         elif act == 'West':
-            newpos = self.robot.pos.getNewPosition(270, self.robot.speed)
+            newpos = self.robot.getNewPosition(270, self.robot.speed)
         else:
           raise ValueError("Unknown action: " + act)
             
