@@ -305,25 +305,22 @@ class ContinuousRobot(object):
         # Do actions ['TurnLeft','TurnRight','Forward','Reverse','Suck']
         # amt is degrees of turn in that direction of speed of forward 0..100
         (act, amt) = self.action
+
+        if not amt:
+          amt = 90.0
         
         if act == 'TurnLeft':
             # Will reset bump
             self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            if not amt:
-                amt = 90.0
             self.robot.dir = int(self.robot.dir - amt % 360)
         elif act == 'TurnRight':
             # Will reset bump
             self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            if not amt:
-                amt = 90.0
             self.robot.dir = int(self.robot.dir + amt % 360)
         elif act == 'Suck':
             self.robot.room.cleanTileAtPosition(self.robot.pos)
             self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
         elif act == 'Forward':
-            if not amt:
-                amt = 100.0
             newpos = self.robot.pos.getNewPosition(self.robot.dir, self.robot.speed * amt / 100.0)
             if self.robot.room.isPositionInRoom(newpos) :
                 # Assume the floor is clear between here and there
