@@ -82,7 +82,7 @@ class RectangularRoom(object):
         self.width = width
         self.height = height
         self.cleaned = {}   # Binary dirt state
-        self.occupied = []  # Binary occupation 
+        self.occupied = {}  # Binary occupation 
 
     def cleanTileAtPosition(self, pos):
         """
@@ -122,7 +122,7 @@ class RectangularRoom(object):
     def isTileOccupied(self, m, n):
       """ Returns True if the tile (m, n) is occupied by an 
       immovable object.  Assumes m,n is in room."""
-      return (m,n) in self.occupied
+      return self.occupied.get((m,n), False)
       
     def setWall(self, x1_y1, x2_y2):
       """ Draws a wall from (x1,y1) to (x2,y2) 
@@ -144,9 +144,9 @@ class RectangularRoom(object):
         y = x * m + b
         blockx = math.floor(x + 0.5)
         blocky = math.floor(y + 0.5)
-        self.occupied.append((blockx, blocky))
+        self.occupied[(blockx, blocky)] = True
         if x != x1 and lx != blockx and ly != blocky:
-          self.occupied.append((blockx-1, blocky))
+          self.occupied[(blockx-1, blocky)] = True
         (lx, ly) = (blockx, blocky)
         x +=step
 
@@ -183,7 +183,7 @@ class RectangularRoom(object):
         x = math.floor(pos.getX())
         y = math.floor(pos.getY())
         return (0 <= pos.getX() < self.width and 0 <= pos.getY() < self.height
-          and not (x,y) in self.occupied)
+          and not self.occupied.get((x,y), False))
         
     def getWidth(self):
       """   Returns the width of the room. """
