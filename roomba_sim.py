@@ -488,7 +488,7 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
                 Default is random placement.
     """
     results = []  # store per trial results for later analysis
-    while num_trials>0:
+    for trial in range(num_trials):
         curroom = copy.deepcopy(room) # copy room since we change it
         if ui_enable:
             anim = roomba_visualize.RobotVisualization(num_robots, curroom, delay=ui_delay)
@@ -507,7 +507,6 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
                 if anim.quit:
                   results.append(thisTime)
                   return meanstdv(results)
-        num_trials -= 1
         if debug: print(thisTime)
         results.append(thisTime)
         if ui_enable:
