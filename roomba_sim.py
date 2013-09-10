@@ -492,11 +492,9 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
         curroom = copy.deepcopy(room) # copy room since we change it
         if ui_enable:
             anim = roomba_visualize.RobotVisualization(num_robots, curroom, delay=ui_delay)
-        i = num_robots
-        robots= []
-        while i>0:
+        robots = []
+        for i in range(num_robots):
             robots.append(robot_type(curroom, speed, start_location, chromosome))
-            i -= 1
         thisTime = 0
         while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thisTime < MAX_STEPS_IN_SIMULATION:
             for robot in robots:
