@@ -182,7 +182,7 @@ class RectangularRoom(object):
         """
         x = math.floor(pos.getX())
         y = math.floor(pos.getY())
-        return (0 <= pos.getX() < self.width and 0 <= pos.getY() < self.height
+        return (0 <= x < self.width and 0 <= y < self.height
           and not self.occupied.get((x,y), False))
         
     def getWidth(self):
