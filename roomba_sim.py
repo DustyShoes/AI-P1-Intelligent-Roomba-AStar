@@ -497,19 +497,19 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
         while i>0:
             robots.append(robot_type(curroom, speed, start_location, chromosome))
             i -= 1
-        thistime = 0
-        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thistime < MAX_STEPS_IN_SIMULATION:
+        thisTime = 0
+        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thisTime < MAX_STEPS_IN_SIMULATION:
             for robot in robots:
                 robot.updatePositionAndClean()
-            thistime += 1
+            thisTime += 1
             if ui_enable:
                 anim.update(curroom, robots)
                 if anim.quit:
-                  results.append(thistime)
+                  results.append(thisTime)
                   return meanstdv(results)
         num_trials -= 1
-        if debug: print(thistime)
-        results.append(thistime)
+        if debug: print(thisTime)
+        results.append(thisTime)
         if ui_enable:
             anim.done()
     return meanstdv(results)
