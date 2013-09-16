@@ -9,7 +9,7 @@ from roomba_sim import *
 from roomba_concurrent import *
 
 # Each robot below should be a subclass of ContinuousRobot, RealisticRobot, or DiscreteRobot.
-# All robots need to implement the runrobot(self) member function, as this is where
+# All robots need to implement the runRobot(self) member function, as this is where
 # you will define that specific robot's characteristics.
 
 # All robots perceive their environment through self.percepts (a class variable) and 

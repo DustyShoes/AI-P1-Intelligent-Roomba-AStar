@@ -21,48 +21,6 @@ MAX_STEPS_IN_SIMULATION = 99999  # Number of time steps to allow a robot to clea
                                 # before we give up.  Prevents runaway robots who can't
                                 # clean.
 
-class Position(object):
-    """
-    A Position represents a location in a two-dimensional room.
-    """
-    def __init__(self, x, y):
-        """
-        Initializes a position with coordinates (x, y).
-        """
-        self.x = x
-        self.y = y
-        
-    def getX(self):
-        return self.x
-    
-    def getY(self):
-        return self.y
-    
-    def getNewPosition(self, angle, speed):
-        """
-        Computes and returns the new Position after a single clock-tick has
-        passed, with this object as the current position, and with the
-        specified angle and speed.
-
-        Does NOT test whether the returned position fits inside the room.
-
-        angle: float representing angle in degrees, 0 <= angle < 360
-        speed: positive float representing speed
-
-        Returns: a Position object representing the new position.
-        """
-        old_x, old_y = self.getX(), self.getY()
-        # Compute the change in position
-        delta_y = speed * math.cos(math.radians(angle))
-        delta_x = speed * math.sin(math.radians(angle))
-        # Add that to the existing position
-        new_x = old_x + delta_x
-        new_y = old_y + delta_y
-        return Position(new_x, new_y)   
-
-    def __str__(self):  
-        return "(%0.2f, %0.2f)" % (self.x, self.y)
-
 class RectangularRoom(object):
     """
     A RectangularRoom represents a rectangular region containing clean or dirty
@@ -81,8 +39,8 @@ class RectangularRoom(object):
         """
         self.width = width
         self.height = height
-        self.cleaned = []   # Binary dirt state
-        self.occupied = []  # Binary occupation 
+        self.cleaned = {}   # Binary dirt state
+        self.occupied = {}  # Binary occupation 
 
     def cleanTileAtPosition(self, pos):
         """
@@ -91,10 +49,11 @@ class RectangularRoom(object):
 
         pos: a Position
         """
-        x = math.floor(pos.getX())
-        y = math.floor(pos.getY())
-        if (x,y) not in self.cleaned:
-            self.cleaned.append((x,y))
+        x,y = pos
+        x = math.floor(x)
+        y = math.floor(y)
+        if not self.cleaned.get((x,y), False):
+            self.cleaned[(x,y)] = True
             
     def tileStateAtPosition(self,pos):
         """
@@ -103,9 +62,10 @@ class RectangularRoom(object):
         
         pos: a Position
         """
-        x = math.floor(pos.getX())
-        y = math.floor(pos.getY())
-        if (x,y) in self.cleaned:
+        x,y = pos
+        x = math.floor(x)
+        y = math.floor(y)
+        if self.cleaned.get((x,y), False):
             return None
         else:
             return 'Dirty'
@@ -117,12 +77,12 @@ class RectangularRoom(object):
         n: an integer
         returns: True if (m, n) is cleaned, False otherwise
         """
-        return (m,n) in self.cleaned
+        return self.cleaned.get((m,n), False)
         
     def isTileOccupied(self, m, n):
       """ Returns True if the tile (m, n) is occupied by an 
       immovable object.  Assumes m,n is in room."""
-      return (m,n) in self.occupied
+      return self.occupied.get((m,n), False)
       
     def setWall(self, x1_y1, x2_y2):
       """ Draws a wall from (x1,y1) to (x2,y2) 
@@ -144,9 +104,9 @@ class RectangularRoom(object):
         y = x * m + b
         blockx = math.floor(x + 0.5)
         blocky = math.floor(y + 0.5)
-        self.occupied.append((blockx, blocky))
+        self.occupied[(blockx, blocky)] = True
         if x != x1 and lx != blockx and ly != blocky:
-          self.occupied.append((blockx-1, blocky))
+          self.occupied[(blockx-1, blocky)] = True
         (lx, ly) = (blockx, blocky)
         x +=step
 
@@ -167,8 +127,8 @@ class RectangularRoom(object):
         returns: a Position object. 
         """
         while True:
-          x = random.choice(range(self.width))
-          y = random.choice(range(self.height))
+          x = random.range(self.width)
+          y = random.range(self.height)
           pos = Position(x,y)
           if self.isPositionInRoom(pos):
             break
@@ -180,10 +140,11 @@ class RectangularRoom(object):
         pos: a Position object.
         returns: True if pos is in the room, False otherwise.
         """
-        x = math.floor(pos.getX())
-        y = math.floor(pos.getY())
-        return (0 <= pos.getX() < self.width and 0 <= pos.getY() < self.height
-          and not (x,y) in self.occupied)
+        x,y = pos
+        x = math.floor(x)
+        y = math.floor(y)
+        return (0 <= x < self.width and 0 <= y < self.height
+          and not self.occupied.get((x,y), False))
         
     def getWidth(self):
       """   Returns the width of the room. """
@@ -231,8 +192,7 @@ class RobotBase(object):
           self.pos = room.getRandomPosition()
           self.dir = int(360 * random.random())
         else:
-          x,y = start_location
-          self.pos = Position(x,y)
+          self.pos = start_location
           self.dir = 90.0
         self.room = room
         self.last = None
@@ -279,6 +239,28 @@ class RobotBase(object):
     def getCleaned(self):
       """ Returns a list of cleaned locations in the environment (x,y)"""
       return self.room.getCleaned()
+
+    def getNewPosition(self, angle, speed):
+        """
+        Computes and returns the new Position after a single clock-tick has
+        passed, with this object as the current position, and with the
+        specified angle and speed.
+
+        Does NOT test whether the returned position fits inside the room.
+
+        angle: float representing angle in degrees, 0 <= angle < 360
+        speed: positive float representing speed
+
+        Returns: a Position object representing the new position.
+        """
+        old_x, old_y = self.pos
+        # Compute the change in position
+        delta_y = speed * math.cos(math.radians(angle))
+        delta_x = speed * math.sin(math.radians(angle))
+        # Add that to the existing position
+        new_x = old_x + delta_x
+        new_y = old_y + delta_y
+        return (new_x, new_y)   
           
 class ContinuousRobot(object):
     """ This class of robot lives in a continuous world where the robot can turn in any
@@ -291,13 +273,56 @@ class ContinuousRobot(object):
         self.robot = RobotBase(room, speed, start_location)
         # Valid percepts (['Bump',None],['Dirty',None])
         self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
-        self.actions = (None,None) 
+        #self.actions = (None,None) 
           # Valid actions (['TurnLeft', 'TurnRight', 'Forward', 'Suck'],
                     #    <turn amount in degrees, speed forward/back [0..100]>)
                     #    None is default (90 degrees or 100 percent)
 
+        # actions dictionary
+        self.actions = {}
+        self.actions['TurnLeft'] = self.turnLeft
+        self.actions['TurnRight'] = self.turnRight
+        self.actions['Suck'] = self.suck
+        self.actions['Forward'] = self.forward
+
     def initialize(self, chromosome):
       """ A hook called during __init__ """
+
+    def turnLeft(self, amt):
+        # Will reset bump
+        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        self.robot.dir = int(self.robot.dir - amt % 360)
+
+    def turnRight(self, amt):
+        # Will reset bump
+        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        self.robot.dir = int(self.robot.dir + amt % 360)
+
+    def suck(self, amt):
+        self.robot.room.cleanTileAtPosition(self.robot.pos)
+        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+
+    def forward(self, amt):
+        newpos = self.robot.getNewPosition(self.robot.dir, self.robot.speed * amt / 100.0)
+        if self.robot.room.isPositionInRoom(newpos) :
+            # Assume the floor is clear between here and there
+            self.robot.pos = newpos
+            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        else:
+            # Can't take a full step, so lets try to get close
+            mindist = 0
+            maxdist = self.robot.speed * amt / 100.0
+            for i in xrange(EDGE_REFINEMENT_STEPS):
+              # maxdist is too far, halfway
+              p1 = self.robot.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
+              if self.robot.room.isPositionInRoom(p1):
+                mindist = (maxdist - mindist) * 1.0/2 + mindist
+                newpos = p1 # save better point
+              else:
+                maxdist = (maxdist - mindist) * 1.0/2 + mindist
+                newpos = self.robot.getNewPosition(self.robot.dir, mindist)
+            self.robot.pos = newpos
+            self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))
         
     def updatePositionAndClean(self):
         # use percepts set up during last action
@@ -305,48 +330,16 @@ class ContinuousRobot(object):
         # Do actions ['TurnLeft','TurnRight','Forward','Reverse','Suck']
         # amt is degrees of turn in that direction of speed of forward 0..100
         (act, amt) = self.action
+
+        # set default amount
+        if not amt:
+          amt = 90.0
         
-        if act == 'TurnLeft':
-            # Will reset bump
-            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            if not amt:
-                amt = 90.0
-            self.robot.dir = int(self.robot.dir - amt % 360)
-        elif act == 'TurnRight':
-            # Will reset bump
-            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            if not amt:
-                amt = 90.0
-            self.robot.dir = int(self.robot.dir + amt % 360)
-        elif act == 'Suck':
-            self.robot.room.cleanTileAtPosition(self.robot.pos)
-            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-        elif act == 'Forward':
-            if not amt:
-                amt = 100.0
-            newpos = self.robot.pos.getNewPosition(self.robot.dir, self.robot.speed * amt / 100.0)
-            if self.robot.room.isPositionInRoom(newpos) :
-                # Assume the floor is clear between here and there
-                self.robot.pos = newpos
-                self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
-            else:
-                # Can't take a full step, so lets try to get close
-                mindist = 0
-                maxdist = self.robot.speed * amt / 100.0
-                for i in range(EDGE_REFINEMENT_STEPS):
-                  # maxdist is too far, halfway
-                  p1 = self.robot.pos.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
-                  if self.robot.room.isPositionInRoom(p1):
-                    mindist = (maxdist - mindist) * 1.0/2 + mindist
-                    newpos = p1 # save better point
-                  else:
-                    maxdist = (maxdist - mindist) * 1.0/2 + mindist
-                    newpos = self.robot.pos.getNewPosition(self.robot.dir, mindist)
-                self.robot.pos = newpos
-                self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))
-        else:
+        # perform action via dictionary lookup (hackerish way to reproduce case-statement)
+        try:
+          self.actions[act](amt)
+        except KeyError:
           raise ValueError("Unknown action: " + act)
-            
         
     def runRobot(self):
       """ User needs to fill in the function.
@@ -382,13 +375,13 @@ class DiscreteRobot(object):
             self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
             return
         elif act == 'North':
-            newpos = self.robot.pos.getNewPosition(0, self.robot.speed)
+            newpos = self.robot.getNewPosition(0, self.robot.speed)
         elif act == 'South':
-            newpos = self.robot.pos.getNewPosition(180, self.robot.speed)
+            newpos = self.robot.getNewPosition(180, self.robot.speed)
         elif act == 'East':
-            newpos = self.robot.pos.getNewPosition(90, self.robot.speed)
+            newpos = self.robot.getNewPosition(90, self.robot.speed)
         elif act == 'West':
-            newpos = self.robot.pos.getNewPosition(270, self.robot.speed)
+            newpos = self.robot.getNewPosition(270, self.robot.speed)
         else:
           raise ValueError("Unknown action: " + act)
             
@@ -488,28 +481,25 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
                 Default is random placement.
     """
     results = []  # store per trial results for later analysis
-    while num_trials>0:
+    for trial in xrange(num_trials):
         curroom = copy.deepcopy(room) # copy room since we change it
         if ui_enable:
             anim = roomba_visualize.RobotVisualization(num_robots, curroom, delay=ui_delay)
-        i = num_robots
-        robots= []
-        while i>0:
+        robots = []
+        for i in xrange(num_robots):
             robots.append(robot_type(curroom, speed, start_location, chromosome))
-            i -= 1
-        thistime = 0
-        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thistime < MAX_STEPS_IN_SIMULATION:
+        thisTime = 0
+        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thisTime < MAX_STEPS_IN_SIMULATION:
             for robot in robots:
                 robot.updatePositionAndClean()
-            thistime += 1
+            thisTime += 1
             if ui_enable:
                 anim.update(curroom, robots)
                 if anim.quit:
-                  results.append(thistime)
+                  results.append(thisTime)
                   return meanstdv(results)
-        num_trials -= 1
-        if debug: print(thistime)
-        results.append(thistime)
+        if debug: print(thisTime)
+        results.append(thisTime)
         if ui_enable:
             anim.done()
     return meanstdv(results)
@@ -520,7 +510,6 @@ def testAllMaps(robot, rooms, numtrials = 10, start_location = -1, chromosome = 
   Prints status to the screen and returns the average performance over all maps and 
   trials."""
   score = 0
-  i = 0
   for room in rooms:
     runscore, runstd = runSimulation(num_robots = 1,
                     speed = 1,
@@ -533,8 +522,7 @@ def testAllMaps(robot, rooms, numtrials = 10, start_location = -1, chromosome = 
                     chromosome = chromosome,
                     ui_enable = False)
     score += runscore
-    print("Room %d of %d done (score: %d std: %d)" % (i+1, len(rooms), runscore, runstd))
-    i = i + 1
+    print("Room %d of %d done (score: %d std: %d)" % (rooms.index(room)+1, len(rooms), runscore, runstd))
   print("Average score over %d trials: %d" % (numtrials * len(rooms), score / len(rooms)))
   return score / len(rooms)
   

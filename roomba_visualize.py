@@ -90,7 +90,7 @@ class RobotVisualization:
 
     def _draw_robot(self, position, direction):
         "Returns a polygon representing a robot with the specified parameters."
-        x, y = position.getX(), position.getY()
+        x, y = position
         d1 = direction + 165
         d2 = direction - 165
         x1, y1 = self._map_coords(x, y)
@@ -122,8 +122,7 @@ class RobotVisualization:
         # Draw new robots - This creates flicker if lots of robots
         self.robots = []
         for robot in robots:
-            pos = robot.robot.getRobotPosition()
-            x, y = pos.getX(), pos.getY()
+            x,y = robot.robot.getRobotPosition()
             x1, y1 = self._map_coords(x - 0.2, y - 0.2)
             x2, y2 = self._map_coords(x + 0.2, y + 0.2)
             self.robots.append(self.w.create_oval(x1, y1, x2, y2,
