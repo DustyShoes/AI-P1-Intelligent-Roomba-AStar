@@ -312,7 +312,7 @@ class ContinuousRobot(object):
             # Can't take a full step, so lets try to get close
             mindist = 0
             maxdist = self.robot.speed * amt / 100.0
-            for i in xrange(EDGE_REFINEMENT_STEPS):
+            for i in range(EDGE_REFINEMENT_STEPS):
               # maxdist is too far, halfway
               p1 = self.robot.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
               if self.robot.room.isPositionInRoom(p1):
@@ -481,12 +481,12 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
                 Default is random placement.
     """
     results = []  # store per trial results for later analysis
-    for trial in xrange(num_trials):
+    for trial in range(num_trials):
         curroom = copy.deepcopy(room) # copy room since we change it
         if ui_enable:
             anim = roomba_visualize.RobotVisualization(num_robots, curroom, delay=ui_delay)
         robots = []
-        for i in xrange(num_robots):
+        for i in range(num_robots):
             robots.append(robot_type(curroom, speed, start_location, chromosome))
         thisTime = 0
         while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thisTime < MAX_STEPS_IN_SIMULATION:
