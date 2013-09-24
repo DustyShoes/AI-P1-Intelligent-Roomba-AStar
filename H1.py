@@ -140,8 +140,7 @@ allRooms.append(mediumWalls5Room) # [6]
 #############################################    
 def discreteTest():
   print(runSimulation(num_robots = 1,
-                    speed = 1,
-                    min_coverage = 0.95,
+                    min_clean = 0.95,
                     num_trials = 1,
                     room = allRooms[6],
                     robot_type = RandomDiscrete,
@@ -151,26 +150,25 @@ def discreteTest():
                     
 def reflexTest():
   print(runSimulation(num_robots = 1,
-                    speed = 1,
-                    min_coverage = 0.95,
-                    num_trials = 10,
+                    min_clean = 0.95,
+                    num_trials = 2,
                     room = allRooms[5],
                     robot_type = ReflexRobot,
                     #robot_type = RandomReflex,
                     #robot_type = ReflexRobotState,
-                    start_location = (5,5),
-                    ui_enable = True,
-                    chromosome = 90,
+                   # start_location = (5,5),
+                   # ui_enable = True,
+                    chromosome = 91,
                     ui_delay = 0.001))
 
 
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
   #discreteTest()
-  reflexTest()
+  #reflexTest()
   
   # Concurrent test execution.
-  #concurrent_test(ReflexRobot, allRooms, 5, (5, 5), 90)
+  print(concurrent_test(ReflexRobot, allRooms, num_trials = 10, min_clean = 0.95, chromosome = 91))
 
   # Sequential test execution.
   #testAllMaps(ReflexRobot, allRooms, 5, (5,5), 90)

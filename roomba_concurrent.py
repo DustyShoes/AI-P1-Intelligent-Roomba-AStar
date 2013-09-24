@@ -7,6 +7,7 @@
 
 from roomba_sim import *
 from multiprocessing import Process, Manager
+import time
 
 class SimulationProcess(Process):
     """
@@ -22,7 +23,7 @@ class SimulationProcess(Process):
     def run(self):
         result = runSimulation(num_robots = 1,
                                speed = 1,
-                               min_coverage = 0.95,
+                               min_clean = self.min_clean,
                                num_trials = self.num_trials,
                                room = self.room,
                                robot_type = self.robot,
@@ -32,12 +33,12 @@ class SimulationProcess(Process):
         self.dict[self.num] = result
     #end run
     
-    def join(self):
-        Process.join(self)
+    def join(self, timeout = None):
+        Process.join(self, timeout)
     #end join
 #end SimulationProcess
 
-def concurrent_test(robot, rooms, num_trials, start_location = -1, chromosome = None):
+def concurrent_test(robot, rooms, num_trials, start_location = -1, min_clean = 1.0, chromosome = None, timeout = 5*60):
     """
     Run the tests in multiple processes. Can be directly swapped out for testAllMaps.
     """
@@ -55,11 +56,33 @@ def concurrent_test(robot, rooms, num_trials, start_location = -1, chromosome = 
         process.room           = room
         process.num_trials     = num_trials
         process.start_location = start_location
+        process.min_clean = min_clean
         process.chromosome     = chromosome
         process.start()
         processes.append(process)
     #end for
 
+    # Wait for timeout, or whenever everything is done
+    starttime = time.time()
+    alldone = True
+    while time.time() - starttime < timeout:
+      alldone = True
+      for i, process in enumerate(processes):
+        if process.is_alive():
+          alldone = False
+      if alldone:
+        break
+      time.sleep(1)
+    
+    # See if processes need killing
+    if not alldone:
+      print('Timeout of ' + str(timeout) + ' seconds occured, killing processes...')
+      for i, process in enumerate(processes):
+        if process.is_alive():
+          print('  Killed ' + str(i))
+          process.terminate()
+          dict[i] = (99998,0)
+        
     # Print the results
     total_score = 0
     for i, process in enumerate(processes):

@@ -2,15 +2,13 @@
 # Author: Paul Talaga
 #
 # This file provides classes and functions to simulate a Roomba-style robot in GUI and
-# batch modes.  See H1.py for example robots and how these functions/classes can be 
-# used.
+# batch modes.  
 
 import math
 import random
 import copy
 
 import roomba_visualize
-
 
 REALISTIC_LEAN_MAX = 0.1  # Max degrees per timestep for lean
 REALISTIC_MARBLE_PROBABILITY = 0.01  # Prob of a marble being hit in a timestep
@@ -30,17 +28,34 @@ class RectangularRoom(object):
     particular time, each of these tiles is either clean or dirty.  Some tiles may
     be occupied.  Occupied tiles are considered clean.
     """
-    def __init__(self, width, height):
+    def __init__(self, width, height, dirt_coverage = 1.0):
         """
         Initializes a rectangular room with the specified width and height.
         Initially, no tiles in the room have been cleaned.
         width: an integer > 0
         height: an integer > 0
+        dirt_coverage: a float > 0, <= 1.0 how much dirt there is, in percentage
         """
         self.width = width
         self.height = height
-        self.cleaned = {}   # Binary dirt state
-        self.occupied = {}  # Binary occupation 
+        self.dirt = set()   # Binary dirt state (x,y)
+        self.occupied = set()  # Binary occupation for walls (x,y)
+        self.dirtStarting = set() # Copy of dirt at beginning
+        # Fill room edges in occupied
+        for x in range(-1, width + 1):  # top and bottom
+            self.occupied.add((x, -1))
+            self.occupied.add((x, height))
+        for y in range(-1, height + 1):  # top and bottom
+            self.occupied.add((-1, y))
+            self.occupied.add((width, y))
+        # Place dirt randomly in the environment
+        # If walls are added, dirt may dissapear!
+        alldirt = [(x,y) for x in range(width) for y in range(height)]
+        random.shuffle(alldirt)
+        for i in range(int(dirt_coverage * width * height)):
+          d = alldirt.pop()
+          self.dirt.add(d)
+        self.dirtStarting = copy.deepcopy(self.dirt)
 
     def cleanTileAtPosition(self, pos):
         """
@@ -52,37 +67,33 @@ class RectangularRoom(object):
         x,y = pos
         x = math.floor(x)
         y = math.floor(y)
-        if not self.cleaned.get((x,y), False):
-            self.cleaned[(x,y)] = True
+        if (x,y)  in self.dirt:
+            self.dirt.remove((x,y))
             
-    def tileStateAtPosition(self,pos):
+    def isTileDirty(self, pos ):
         """
         Returns 'Dirty' or None, depending on if the tile at
         pos is dirty or not.
         
-        pos: a Position
+        pos: a Position (x,y)
         """
         x,y = pos
         x = math.floor(x)
         y = math.floor(y)
-        if self.cleaned.get((x,y), False):
-            return None
-        else:
+        if (x,y) in self.dirt:
             return 'Dirty'
-
-    def isTileCleaned(self, m, n):
-        """ Return True if the tile (m, n) has been cleaned.
-        Assumes that (m, n) represents a valid tile inside the room.
-        m: an integer
-        n: an integer
-        returns: True if (m, n) is cleaned, False otherwise
-        """
-        return self.cleaned.get((m,n), False)
+        else:
+            return None
         
-    def isTileOccupied(self, m, n):
-      """ Returns True if the tile (m, n) is occupied by an 
-      immovable object.  Assumes m,n is in room."""
-      return self.occupied.get((m,n), False)
+    def isTileOccupied(self, pos):
+      """ Returns True if the position (x, y) is occupied by an 
+      immovable object or outside the room."""
+      x,y = pos
+      x = math.floor(x)
+      y = math.floor(y)
+      if x < 0 or x > self.width or y < 0 or y > self.height:
+        return True
+      return (x,y) in self.occupied
       
     def setWall(self, x1_y1, x2_y2):
       """ Draws a wall from (x1,y1) to (x2,y2) 
@@ -104,47 +115,39 @@ class RectangularRoom(object):
         y = x * m + b
         blockx = math.floor(x + 0.5)
         blocky = math.floor(y + 0.5)
-        self.occupied[(blockx, blocky)] = True
+        self.occupied.add( (blockx, blocky) )
         if x != x1 and lx != blockx and ly != blocky:
-          self.occupied[(blockx-1, blocky)] = True
+          self.occupied.add( (blockx-1, blocky) )
         (lx, ly) = (blockx, blocky)
         x +=step
+      # Remove these walls from dirt
+      self.dirt = self.dirt - self.occupied
+      self.dirtStarting = self.dirtStarting - self.occupied
 
     def getNumTiles(self):
         """ Return the total number of tiles in the room.
         returns: an integer
         """
-        return self.width * self.height - len(self.occupied)
+        return (self.width * self.height - len(self.occupied) + 
+          self.width * 2 + self.height * 2 + 4)  # ignore edges
 
-    def getNumCleanedTiles(self):
+    def getNumCleanTiles(self):
         """   Return the total number of clean tiles in the room.
         returns: an integer
         """
-        return len(self.cleaned)
+        return self.getNumTiles() - len(set(self.dirt))
 
     def getRandomPosition(self):
         """ Return a random unoccupied position inside the room.
         returns: a Position object. 
         """
         while True:
-          x = random.range(self.width)
-          y = random.range(self.height)
-          pos = Position(x,y)
-          if self.isPositionInRoom(pos):
+          x = random.randrange(self.width)
+          y = random.randrange(self.height)
+          pos = (x,y)
+          if not self.isTileOccupied(pos):
             break
         return pos
-
-    def isPositionInRoom(self, pos):
-        """   Return True if pos is inside the room.
-        An occupied tile is considered outside the room.
-        pos: a Position object.
-        returns: True if pos is in the room, False otherwise.
-        """
-        x,y = pos
-        x = math.floor(x)
-        y = math.floor(y)
-        return (0 <= x < self.width and 0 <= y < self.height
-          and not self.occupied.get((x,y), False))
         
     def getWidth(self):
       """   Returns the width of the room. """
@@ -159,10 +162,10 @@ class RectangularRoom(object):
       Each location is a tuple (x,y)"""
       return copy.deepcopy(self.occupied) # return a copy so you can't change it!
       
-    def getCleaned(self):
+    def getDirt(self):
       """ Returns a list of all cleaned cells in the room.
       Each location is a tuple (x,y)"""
-      return copy.deepcopy(self.cleaned) # return a copy so you can't change it!
+      return copy.deepcopy(self.dirt) # return a copy so you can't change it!
 
 
 class RobotBase(object):
@@ -203,7 +206,7 @@ class RobotBase(object):
 
     def getRobotPosition(self):
         """ Return the position of the robot.
-          returns: a Position object giving the robot's position.
+          returns: a (x,y) giving the robot's position.
         """
         return self.pos
 
@@ -216,7 +219,7 @@ class RobotBase(object):
 
     def setRobotPosition(self, position):
         """ Set the position of the robot to POSITION.
-          position: a Position object.
+          position: (x,y).
         """
         self.pos = position
 
@@ -236,9 +239,9 @@ class RobotBase(object):
       """ Returns a list of immovable object in the environment  (x,y)"""
       return self.room.getWalls()
       
-    def getCleaned(self):
-      """ Returns a list of cleaned locations in the environment (x,y)"""
-      return self.room.getCleaned()
+    def getDirt(self):
+      """ Returns a list of dirty locations in the environment (x,y)"""
+      return self.room.getDirt()
 
     def getNewPosition(self, angle, speed):
         """
@@ -261,6 +264,13 @@ class RobotBase(object):
         new_x = old_x + delta_x
         new_y = old_y + delta_y
         return (new_x, new_y)   
+        
+    def centerInCell(self):
+      """ Moves the position to the middle of a cell (x.5, y.5)"""
+      x, y = self.pos
+      x = int(x) + 0.5
+      y = int(y) + 0.5
+      self.pos = (x,y)
           
 class ContinuousRobot(object):
     """ This class of robot lives in a continuous world where the robot can turn in any
@@ -268,11 +278,11 @@ class ContinuousRobot(object):
     speed (100 is full step distance), or 'Suck' dirt.  
     Deterministic environment.
     """
-    def __init__(self,room,speed, start_location = -1, chromosome = None):
+    def __init__(self,room, speed, start_location = -1, chromosome = None):
         self.initialize(chromosome)
         self.robot = RobotBase(room, speed, start_location)
         # Valid percepts (['Bump',None],['Dirty',None])
-        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
+        self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos) )
         #self.actions = (None,None) 
           # Valid actions (['TurnLeft', 'TurnRight', 'Forward', 'Suck'],
                     #    <turn amount in degrees, speed forward/back [0..100]>)
@@ -290,24 +300,27 @@ class ContinuousRobot(object):
 
     def turnLeft(self, amt):
         # Will reset bump
-        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos))
         self.robot.dir = int(self.robot.dir - amt % 360)
 
     def turnRight(self, amt):
         # Will reset bump
-        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos))
         self.robot.dir = int(self.robot.dir + amt % 360)
 
     def suck(self, amt):
         self.robot.room.cleanTileAtPosition(self.robot.pos)
-        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+        self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos))
 
     def forward(self, amt):
+        # Robot observed jumping through walls, so let's check half step
+        halfpos = self.robot.getNewPosition(self.robot.dir, self.robot.speed * amt / 50.0)
         newpos = self.robot.getNewPosition(self.robot.dir, self.robot.speed * amt / 100.0)
-        if self.robot.room.isPositionInRoom(newpos) :
+        if not (self.robot.room.isTileOccupied(newpos) 
+              or self.robot.room.isTileOccupied(halfpos)):
             # Assume the floor is clear between here and there
             self.robot.pos = newpos
-            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+            self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos))
         else:
             # Can't take a full step, so lets try to get close
             mindist = 0
@@ -315,14 +328,14 @@ class ContinuousRobot(object):
             for i in range(EDGE_REFINEMENT_STEPS):
               # maxdist is too far, halfway
               p1 = self.robot.getNewPosition(self.robot.dir, (maxdist - mindist) * 1.0/2 + mindist)  # half step
-              if self.robot.room.isPositionInRoom(p1):
+              if self.robot.room.isTileOccupied(p1):
                 mindist = (maxdist - mindist) * 1.0/2 + mindist
                 newpos = p1 # save better point
               else:
                 maxdist = (maxdist - mindist) * 1.0/2 + mindist
                 newpos = self.robot.getNewPosition(self.robot.dir, mindist)
             self.robot.pos = newpos
-            self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))
+            self.percepts = ('Bump',self.robot.room.isTileDirty(self.robot.pos))
         
     def updatePositionAndClean(self):
         # use percepts set up during last action
@@ -357,10 +370,12 @@ class DiscreteRobot(object):
     def __init__(self,room,speed, start_location = -1, chromosome = None):
         self.initialize(chromosome)
         self.robot = RobotBase(room,speed, start_location)
+        self.robot.centerInCell()
         # Valid percepts (['Bump',None],['Dirty',None])
-        self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos) )
+        self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos) )
         self.actions = (None) 
           # Valid actions ['North', 'South', 'East', 'West', 'Suck']
+          
 
     def initialize(self, chromosome):
         """ A hook called during __init__ """
@@ -372,7 +387,7 @@ class DiscreteRobot(object):
         (act) = self.action
         if act == 'Suck':
             self.robot.room.cleanTileAtPosition(self.robot.pos)
-            self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+            self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos))
             return
         elif act == 'North':
             newpos = self.robot.getNewPosition(0, self.robot.speed)
@@ -384,14 +399,13 @@ class DiscreteRobot(object):
             newpos = self.robot.getNewPosition(270, self.robot.speed)
         else:
           raise ValueError("Unknown action: " + act)
-            
-        if self.robot.room.isPositionInRoom(newpos) :
+        if not self.robot.room.isTileOccupied(newpos) :
           # Assume the floor is clear between here and there
           self.robot.pos = newpos
-          self.percepts = (None,self.robot.room.tileStateAtPosition(self.robot.pos))
+          self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos))
         else:
           # Robot doesn't move
-          self.percepts = ('Bump',self.robot.room.tileStateAtPosition(self.robot.pos))           
+          self.percepts = ('Bump',self.robot.room.isTileDirty(self.robot.pos))           
         
     def runRobot(self):
       """ User needs to fill in the function.
@@ -401,13 +415,30 @@ class DiscreteRobot(object):
       raise NotImplementedError
         
     def getRobotPosition(self):
+      """ Return the position of the robot as a (x,y) tuple."""
       return self.robot.getRobotPosition()
     
     def getWalls(self):
+      """ Returns a set of (x,y) tuples defining where the 'walls' are located.
+      A wall is just a cell the robot can not occupy.  Such a cell can not be
+      dirty.  Cells just outside the room's borders are in this set."""
       return self.robot.getWalls()
       
-    def getCleaned(self):
-      return self.robot.getCleaned()
+    def getDirty(self):
+      """ Returns a set of (x,y) tuples indicating where the dirt is."""
+      return self.robot.getDirt()
+      
+    def getNumTiles(self):
+      """ Returns the total number of navigable locations in the room."""
+      return self.robot.room.getNumTiles()
+      
+    def getRoomWidth(self):
+      """ Width of room as an integer.  0-based"""
+      return self.robot.room.getWidth()
+      
+    def getRoomHeight(self):
+      """ Height of room as an integer. 0-based"""
+      return self.robot.room.getHeight()
       
 class RealisticRobot(ContinuousRobot):
     """
@@ -457,12 +488,18 @@ def meanstdv(x):
 
 
 
-def runSimulation(num_robots, speed, min_coverage, num_trials,
-                  robot_type, room, ui_enable = False, ui_delay = 0.2,
-                  start_location = -1, debug = False, chromosome = None):
+def runSimulation(robot_type, room, 
+                  num_robots = 1, 
+                  speed = 1, 
+                  min_clean = 1.0, 
+                  num_trials = 1,
+                  ui_enable = False, 
+                  ui_delay = 0.2,
+                  start_location = -1, 
+                  chromosome = None):
     """
     Runs NUM_TRIALS trials of the simulation and returns the (mean, std) number of
-    time-steps needed to clean the fraction MIN_COVERAGE of the room.
+    time-steps needed to clean the fraction min_clean of the room.
 
     The simulation is run with NUM_ROBOTS robots of type ROBOT_TYPE, each with
     speed SPEED, in a ROOM.
@@ -470,7 +507,7 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
     num_robots: an int (num_robots > 0)
     speed: a float (speed > 0) Blocks traveled per time step.  If >1, robot
                 will not vacuum where it has traveled.
-    min_coverage: a float (0 <= min_coverage <= 1.0)
+    min_clean: a float (0 <= min_clean <= 1.0)
     num_trials: an int (num_trials > 0)
     robot_type: class of robot to be instantiated (e.g. StandardRobot or
                 RandomWalkRobot)
@@ -484,12 +521,12 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
     for trial in range(num_trials):
         curroom = copy.deepcopy(room) # copy room since we change it
         if ui_enable:
-            anim = roomba_visualize.RobotVisualization(num_robots, curroom, delay=ui_delay)
+            anim = roomba_visualize.RobotVisualization(num_robots, curroom, delay=ui_delay, goal=min_clean)
         robots = []
         for i in range(num_robots):
             robots.append(robot_type(curroom, speed, start_location, chromosome))
         thisTime = 0
-        while min_coverage * curroom.getNumTiles() > curroom.getNumCleanedTiles() and thisTime < MAX_STEPS_IN_SIMULATION:
+        while min_clean * curroom.getNumTiles() > curroom.getNumCleanTiles() and thisTime < MAX_STEPS_IN_SIMULATION:
             for robot in robots:
                 robot.updatePositionAndClean()
             thisTime += 1
@@ -498,7 +535,6 @@ def runSimulation(num_robots, speed, min_coverage, num_trials,
                 if anim.quit:
                   results.append(thisTime)
                   return meanstdv(results)
-        if debug: print(thisTime)
         results.append(thisTime)
         if ui_enable:
             anim.done()
@@ -513,7 +549,7 @@ def testAllMaps(robot, rooms, numtrials = 10, start_location = -1, chromosome = 
   for room in rooms:
     runscore, runstd = runSimulation(num_robots = 1,
                     speed = 1,
-                    min_coverage = 0.95,
+                    min_clean = 0.95,
                     num_trials = numtrials,
                     room = room,
                     robot_type = robot,
