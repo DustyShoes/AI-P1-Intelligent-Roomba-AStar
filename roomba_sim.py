@@ -368,12 +368,13 @@ class DiscreteRobot(object):
     Deterministic
     """
     def __init__(self,room,speed, start_location = -1, chromosome = None):
-        self.initialize(chromosome)
+        
         self.robot = RobotBase(room,speed, start_location)
         self.robot.centerInCell()
         # Valid percepts (['Bump',None],['Dirty',None])
         self.percepts = (None,self.robot.room.isTileDirty(self.robot.pos) )
         self.actions = (None) 
+        self.initialize(chromosome)
           # Valid actions ['North', 'South', 'East', 'West', 'Suck']
           
 
