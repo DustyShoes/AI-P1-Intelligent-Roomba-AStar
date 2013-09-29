@@ -88,7 +88,7 @@ def concurrent_test(robot, rooms, num_trials, start_location = -1, min_clean = 1
     for i, process in enumerate(processes):
         process.join()
         (score, std) = dict[i]
-        print("Room %d of %d done (score: %d std: %d)" % (i + 1, num_rooms, score, std))
+        print("Run %d of %d done (score: %d std: %d)" % (i + 1, num_rooms, score, std))
         total_score += score
     #end for
     
