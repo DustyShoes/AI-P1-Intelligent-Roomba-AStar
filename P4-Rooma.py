@@ -28,7 +28,7 @@ class TunedRobot(RealisticRobot):
   """
   def __init__(self,room,speed, start_location = -1, chromosome = None):
     super(TunedRobot, self).__init__(room,speed, start_location)
-    # Set initial state here
+    # Set initial state here you may only store a single number.
     self.state = 0
     # Save chromosome value
     self.degrees = chromosome
@@ -44,6 +44,7 @@ class TunedRobot(RealisticRobot):
       self.action = ('Forward',None)
 
 def getChromosome(rooms, start_location, min_clean):
+    # Fill me in!
     return 5
         
 ############################################
@@ -110,16 +111,16 @@ def TunedTest2():
 
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
-  #TunedTest1()
+  TunedTest1()
   #TunedTest2()
   
-  # This is an example of how we will test your code.
-  rooms = [allRooms[1], allRooms[5]]
-  startLoc = (5,5)
-  minClean = 0.2
-  chromosome = getChromosome(rooms, startLoc, minClean)
+  # This is an example of how we will test your program.  Our rooms will not be those listed above, but similar.
+  #rooms = [allRooms[1], allRooms[5]]
+  #startLoc = (5,5)
+  #minClean = 0.2
+  #chromosome = getChromosome(rooms, startLoc, minClean)
   
   # Concurrent test execution.
-  print(concurrent_test(TunedRobot, rooms, num_trials = 20, min_clean = minClean, chromosome = chromosome))
+  #print(concurrent_test(TunedRobot, rooms, num_trials = 20, min_clean = minClean, chromosome = chromosome))
 
 
