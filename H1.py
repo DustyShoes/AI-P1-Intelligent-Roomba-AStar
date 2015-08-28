@@ -29,7 +29,8 @@ class ReflexRobot(ContinuousRobot):
     position, the configuration of the environment, or memory.
   """
   def initialize(self, chromosome):
-    self.degrees = chromosome
+    #self.degrees = chromosome
+    pass
 
   def runRobot(self):
     """ runRobot gets called once per timestep.  Based on the current percept
@@ -40,7 +41,7 @@ class ReflexRobot(ContinuousRobot):
     (bstate, dirt) = self.percepts
     # This implements the transition function.  Order matters!
     if(bstate == 'Bump'):
-      self.action = ('TurnLeft', self.degrees)
+      self.action = ('TurnLeft', 100)
     elif(dirt == 'Dirty'):
       self.action = ('Suck',None)
     else:
@@ -151,15 +152,15 @@ def discreteTest():
 def reflexTest():
   print(runSimulation(num_robots = 1,
                     min_clean = 0.95,
-                    num_trials = 2,
-                    room = allRooms[5],
-                    robot_type = ReflexRobot,
-                    #robot_type = RandomReflex,
+                    num_trials = 4,
+                    room = allRooms[0],
+                    #robot_type = ReflexRobot,
+                    robot_type = RandomReflex,
                     #robot_type = ReflexRobotState,
                    # start_location = (5,5),
-                   # ui_enable = True,
-                    chromosome = 91,
-                    ui_delay = 0.001))
+                    ui_enable = True,
+                    chromosome = 11,
+                    ui_delay = 0.0000))
 
 
 if __name__ == "__main__":
@@ -168,10 +169,10 @@ if __name__ == "__main__":
   #reflexTest()
   
   # Concurrent test execution.
-  print(concurrent_test(ReflexRobot, allRooms, num_trials = 10, min_clean = 0.95, chromosome = 91))
+  print(concurrent_test(RandomDiscrete, allRooms, num_trials = 5, min_clean = 0.95, start_location = (5,5)))
 
   # Sequential test execution.
-  #testAllMaps(ReflexRobot, allRooms, 5, (5,5), 90)
+  #testAllMaps(ReflexRobot, allRooms, 20, (5,5), 95)
 
   #testAllMaps(RandomReflex, allRooms, 2,(5,5))
   #testAllMaps(RandomDiscrete, allRooms, 20, (5,5))
