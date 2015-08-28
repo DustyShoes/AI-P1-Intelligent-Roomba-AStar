@@ -166,10 +166,10 @@ def reflexTest():
 if __name__ == "__main__":
   # This code will be run if this file is called on its own
   #discreteTest()
-  #reflexTest()
+  reflexTest()
   
   # Concurrent test execution.
-  print(concurrent_test(RandomDiscrete, allRooms, num_trials = 5, min_clean = 0.95, start_location = (5,5)))
+  #print(concurrent_test(RandomDiscrete, allRooms, num_trials = 5, min_clean = 0.95, start_location = (5,5)))
 
   # Sequential test execution.
   #testAllMaps(ReflexRobot, allRooms, 20, (5,5), 95)
