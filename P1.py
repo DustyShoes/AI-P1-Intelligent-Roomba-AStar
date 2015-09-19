@@ -1,23 +1,62 @@
 # P1.py
-# Author: Paul Talaga
+# Adam White
 # 
 # This file implements an aStarRobot robot capable of cleaning a fully-observable
 # deterministic, static, discrete world.
 
+#import threading
+import queue
+import heapq
+from multiprocessing import Process, Queue
+
 from roomba_sim import *
 from roomba_concurrent import *
 
+walls = []
+
+movementQueue = queue.Queue()
+fringe = []
+
+def solver(dirt, location, walls):
+    (weight, movements, location, dirt) = heapq.heappop(fringe)
+    print("dirt ", dirt)
+    print("start ", location)
+
+    if location in dirt :
+        print("roomba is on top of dirt")
+        movementQueue.put('Suck')
+        newDirt = copy.deepcopy(dirt)
+        newDirt.remove(location)
+        fix
+        
+        
+    #roomWidth = self.getRoomWidth()
+    #roomHeight = self.getRoomHeight()
 
 class aStarRobot(DiscreteRobot):
+    #solved = false
 
-  def initialize(self, chromosome):
-    self.state = None
+    def initialize(self, chromosome):
+        self.state = None
+        startCoords = self.getRobotPosition()
+        (startX, startY) = startCoords
+        startLX = int(startX)
+        startLY = int(startY)
+        location = (startLX, startLY)
+        firstElement = (0, [], location, self.getDirty())
+        heapq.heappush(fringe, firstElement)
+        
+        solution = solver(self.getDirty(), location, self.getWalls())
   
-  def runRobot(self):
-    (bstate, dirt) = self.percepts
-    # Do lots of robot stuff here!
-    self.action = random.choice(['North','South','East','West','Suck'])
-    
+    def runRobot(self):
+        #print("runRobot")
+        (bstate, dirt) = self.percepts
+
+        #if RobotBase.getDirty() :
+        #self.action = 'Suck'
+        #else :
+        self.action = random.choice(['North','South','East','West'])
+      
     
 
         
@@ -67,8 +106,15 @@ allRooms.append(mediumWalls5Room) # [7]
 
 #############################################    
 def aStar():
-  print(runSimulation(num_trials = 2,
-                    room = allRooms[0],
+    #start multiple threads
+    #movesQueue = Queue() #multithreaded queue.
+    #solverProcess = Process(target=solver, args=(queue))
+    #solverProcess.start()
+
+    #solution = solver(self)
+    
+    print(runSimulation(num_trials = 2,
+                    room = allRooms[0], #Change room number here
                     robot_type = aStarRobot,
                     ui_enable = True,
                     ui_delay = 0.01))
@@ -81,6 +127,7 @@ if __name__ == "__main__":
   #aStar()
   
   # Concurrent test execution.
-  concurrent_test(aStarRobot, [allRooms[0], allRooms[1], allRooms[2]], 10)
+  aStar()
+  #concurrent_test(aStarRobot, [allRooms[0], allRooms[1], allRooms[2]], 10)
   #testAllMaps(aStarRobot, [allRooms[0], allRooms[1], allRooms[2]], 2)
 
