@@ -12,22 +12,35 @@ from multiprocessing import Process, Queue
 from roomba_sim import *
 from roomba_concurrent import *
 
+goalMoves = 135
+bestSolutionMovements = None
+
 walls = []
 
 movementQueue = queue.Queue()
 fringe = []
 
 def solver(dirt, location, walls):
-    (weight, movements, location, dirt) = heapq.heappop(fringe)
-    print("dirt ", dirt)
-    print("start ", location)
+    #temperature = 115  
+    #while temperature > 112: # first while loop code
+    #condition = ((bestSolutionMovements == None) or (len(bestSolutionMovements) > goalMoves))
+    while ((bestSolutionMovements == None) or (len(bestSolutionMovements) > goalMoves)) :
+        print("things")
+        item = heapq.heappop(fringe)
+        (weight, movements, location, dirt) = item
+        print("dirt ", dirt)
+        print("start ", location)
 
-    if location in dirt :
-        print("roomba is on top of dirt")
-        movementQueue.put('Suck')
-        newDirt = copy.deepcopy(dirt)
-        newDirt.remove(location)
-        fix
+        if location in dirt :
+            print("roomba is on top of dirt")
+            movementQueue.put('Suck')
+            newDirt = copy.deepcopy(dirt) #slow
+            newDirt.remove(location)
+            newMovements = copy.deepcopy(movements) #slow
+            newMovements.append('Suck')
+            newWeight = len(newMovements) + dijsktrasHeuristic #A* heuristic
+            newFringe = (newWeight, newMovements, location, newDirt)
+            continue
         
         
     #roomWidth = self.getRoomWidth()
