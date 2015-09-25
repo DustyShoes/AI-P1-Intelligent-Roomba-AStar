@@ -5,38 +5,14 @@
 # deterministic, static, discrete world.
 
 #import threading
-import queue
 import heapq
 from multiprocessing import Process, Queue
-from collections import deque
 
 from roomba_sim import *
 from roomba_concurrent import *
 
 goalMoves = 135
-completed = False
-bestSolutionMovements = []
-
-walls = []
-roomWidth = 0
-roomHeight = 0
-
-#movementQueue = queue.Queue()
-fringe = []
-
-class fringeElement(object):
-    def __init__(self, weight, movements, location, dirt):
-        self.weight = weight
-        self.movements = movements
-        self.location = location
-        self.dirt = dirt
-        return
-    def __cmp__(self, other):
-        return cmp(self.weight, other.weight)
-
-    #delete
-    def getWeight():
-        return weight
+heuristic = None #which heuristic method to use
 
 def dijsktrasHeuristic(dirt):
     #TODO
@@ -44,18 +20,10 @@ def dijsktrasHeuristic(dirt):
 
 def solver(node, walls):
     (movements, location, dirt) = node
-    #temperature = 115  
-    #while temperature > 112: # first while loop code
-    #condition = ((bestSolutionMovements == None) or (len(bestSolutionMovements) > goalMoves))
     newWeight = 0 + dijsktrasHeuristic(dirt)
     q = [] #heapq
-    #f.append((newWeight, movements, location, dirt))
     heapq.heappush(q, (newWeight, movements, location, dirt))
-    while (not completed) :
-        #heapq.heappush(fringe, fringeElement(10, data))
-        #(weight, dat) = heapq.heappop(fringe)
-        #currentFringeElement = heapq.heappop(fringe)
-        #item = f.pop()
+    while (len(dirt) > 0) :
         print("popping:")
         (weight, movements, location, dirt) = heapq.heappop(q)
         print("popped node: weight", weight, " movements ", movements, " location ", location, " dirt ", dirt)
@@ -66,14 +34,11 @@ def solver(node, walls):
 
         if location in dirt :
             print("roomba is on top of dirt")
-            #movementQueue.put('Suck')
             newDirt = copy.deepcopy(dirt) #slow #todo: this deepcopy can be eliminated, since we are returing immediately after this
             newDirt.remove(location)
             newMovements = copy.deepcopy(movements) #slow #todo: this deepcopy can be eliminated, since we are returing immediately after this
             newMovements.append('Suck')
             newWeight = len(newMovements) + dijsktrasHeuristic(newDirt) #A* heuristic
-            #newFringe = (newMovements, location, newDirt)
-            #heapq.heappush(fringe, (newWeight, newFringe)) here. figure out how things are stored on a fringe.
             heapq.heappush(q, (newWeight, newMovements, location, newDirt))
             continue
 
@@ -86,8 +51,6 @@ def solver(node, walls):
             newMovements = copy.deepcopy(movements) #slow
             newMovements.append('East')
             newWeight = weight + 1 #len(newMovements) + dijsktrasHeuristic #A* heuristic #TODO: does this even change if nothing is sucked?
-            #newFringe = (newWeight, newMovements, newLocation, dirt)
-            #heapq.heappush(newFringe)
             heapq.heappush(q, (newWeight, newMovements, newLocation, dirt))
 
         #West
@@ -97,8 +60,6 @@ def solver(node, walls):
             newMovements = copy.deepcopy(movements) #slow
             newMovements.append('West')
             newWeight = weight + 1 #len(newMovements) + dijsktrasHeuristic #A* heuristic #TODO: does this even change if nothing is sucked?
-            #newFringe = (newWeight, newMovements, newLocation, dirt)
-            #heapq.heappush(newFringe)
             heapq.heappush(q, (newWeight, newMovements, newLocation, dirt))
 
         #North
@@ -117,15 +78,12 @@ def solver(node, walls):
             newMovements = copy.deepcopy(movements) #slow
             newMovements.append('South')
             newWeight = weight + 1 #len(newMovements) + dijsktrasHeuristic #A* heuristic #TODO: does this even change if nothing is sucked?
-            #newFringe = (newWeight, newMovements, newLocation, dirt)
-            #heapq.heappush(newFringe)
             heapq.heappush(q, (newWeight, newMovements, newLocation, dirt))
             
         
         
 
 class aStarRobot(DiscreteRobot):
-    #solved = false
 
     def initialize(self, chromosome):
         self.state = None
@@ -134,16 +92,15 @@ class aStarRobot(DiscreteRobot):
         startLX = int(startX)
         startLY = int(startY)
         location = (startLX, startLY)
-        #roomWidth = self.getRoomWidth()
-        #roomHeight = self.getRoomHeight()
         firstNode = ([], location, self.getDirty())
-        #heapq.heappush(fringe, firstElement)
         
         solutionMovements = solver(firstNode, self.getWalls())
   
     def runRobot(self):
-        #print("runRobot")
+        print("runRobot")
         (bstate, dirt) = self.percepts
+
+        #TODO
 
         #if RobotBase.getDirty() :
         #self.action = 'Suck'
@@ -200,7 +157,7 @@ allRooms.append(mediumWalls5Room) # [7]
 #############################################    
 def aStar():
     #start multiple threads
-    #movesQueue = Queue() #multithreaded queue.
+    #movesQueue = Queue() #multithreaded queue. TODO This needs to be the heapq
     #solverProcess = Process(target=solver, args=(queue))
     #solverProcess.start()
 
