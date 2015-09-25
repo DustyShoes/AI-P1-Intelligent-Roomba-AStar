@@ -2,7 +2,7 @@
 goal = [1,2,3,4,5,6,7,8,None]
 
 def isGoal(node):
-    (state, path) = node
+    (state, yeah, path) = node
     return state == goal
     
 def swapNew(state, a, b):
@@ -11,11 +11,11 @@ def swapNew(state, a, b):
     return copy
 
 def getHash(node):
-    (state, path) = node
+    (state, yeah, path) = node
     return str(state)
   
 def h1(node):
-    (state, path) = node
+    (state, yeah, path) = node
     count = 8
     for i in range(9):
         if state[i] == goal[i] and state[i] != None:
@@ -36,11 +36,11 @@ def h2(node):
     return counter
   
 def g(node):
-    (state, path) = node
+    (state, yeah, path) = node
     return len(path)
   
 def generateSuccessors(node):
-    (state, path) = node
+    (state, yeah, path) = node
     ret = []
     noneloc = state.index(None)
     # Can I move up?
@@ -78,8 +78,7 @@ def astar(node, h):
             if len(frontier) > maxFrontier:
                 maxFrontier = len(frontier)
       
-startNode = ([1,2,3,4,None,6,7,5,8], "")
-startNode = ([6,4,3,1,2,5,7,None,8], "")
+startNode = ([1,2,3,4,None,6,7,5,8], "yeah", "")
 
 #print(h2(startNode))
 
