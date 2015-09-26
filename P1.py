@@ -29,8 +29,8 @@ class concurrencyManager(object):
 def simpleNumDirtyHeuristic(dirt, location):
     #Just returns the amount of dirt left
     if location in dirt :
-        return (len(dirt) * 1.8) - 1
-    return len(dirt) * 1.9
+        return (len(dirt) * 1.5) - .3
+    return len(dirt) * 1.5
 
 def dijsktrasHeuristic(dirt, location):
     #This is related to the travelling salesperson problem
@@ -49,14 +49,16 @@ def solver(node, walls, heuristic, CM):
         #print("popped node: weight", weight, " movements ", movements, " location ", location, " dirt ", dirt)
         if ( len(dirt) <= 0 ) :
             if (len(movements) < goalMoves) :
-                print("")
-                print("")
-                print("--------STATISTICS!!! -----------")
-                print("")
-                print("found a solution which is ", len(movements), " long.")
-                print("The total number of possibilities explored was ", numExplored)
-                print("The maximum number of frontier object stored in heapq at one time was: ", " (not implemented yet)")
-                print("")
+                logging = False
+                if(logging):
+                    print("")
+                    print("")
+                    print("--------STATISTICS!!! -----------")
+                    print("")
+                    print("found a solution which is ", len(movements), " long.")
+                    print("The total number of possibilities explored was ", numExplored)
+                    print("The maximum number of frontier object stored in heapq at one time was: ", " (not implemented yet)")
+                    print("")
                 CM.storeSolution(movements)
                 CM.completed = True
                 return movements
@@ -66,7 +68,7 @@ def solver(node, walls, heuristic, CM):
             #print("roomba is on top of dirt")
             newDirt = copy.deepcopy(dirt) #slow #todo: this deepcopy can be eliminated, since we are returing immediately after this
             newDirt.remove(location)
-            newMovements = copy.deepcopy(movements) #slow #todo: this deepcopy can be eliminated, since we are returing immediately after this
+            newMovements = movements #copy.deepcopy(movements) #slow #todo: this deepcopy can be eliminated, since we are returing immediately after this
             newMovements.append('Suck')
             newWeight = len(newMovements) + heuristic(newDirt, location) #A* heuristic
             heapq.heappush(q, (newWeight, newMovements, location, newDirt))
@@ -207,11 +209,11 @@ allRooms.append(easyRoom) # [8] for debugging only, not graded
 
 #############################################    
 def aStar():
-    print(runSimulation(num_trials = 2,
-                    room = allRooms[8], #Change room number here
+    print(runSimulation(num_trials = 1,
+                    room = allRooms[1], #Change room number here
                     robot_type = aStarRobot,
                     ui_enable = True,
-                    ui_delay = 0.01))
+                    ui_delay = 0.1))
                     
                     
 
