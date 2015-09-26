@@ -15,10 +15,9 @@ goalMoves = 135
 #heuristic = None #which heuristic method to use
 
 class concurrencyManager(object):
-    def __init__(self, totalTiles):
+    def __init__(self):
         self.completed = False # Whether we have found the solution. Kill other threads if true.
         self.optimalSolution = [] # Stores the optimal solution
-        self.totalTiles = totalTiles
 
     def storeSolution(self, solution):
         for move in solution:
@@ -31,7 +30,7 @@ def getHash(location, dirt, movements):
     return str(str(location) + str(dirt) + str(len(movements)))
     #return str(location + dirt + str(len(movements)))
 
-def isolatedDirty(dirt, location):
+def isolatedDirty(totalSquares, dirt, location, movements):
     #Avoids lonely 'forgotten' spots. Quite slow.
     (roombaX, roombaY) = location
     for dirtySquare in dirt:
@@ -48,7 +47,54 @@ def isolatedDirty(dirt, location):
                         return 0
     return 4
 
-def simpleNumDirtyHeuristic(totalSquares, dirt, location, movements):
+def twoClusterHeuristic(dirt):
+    #Attempts to determine if there is more than one major cluster in the dirt.
+    #If split into 2 clusters, we should go back and ignore this route.
+    remainingDirt = copy.deepcopy(dirt)
+    neighbors = {}
+    #(firstDirtX, firstDirtY) = dirt.pop() #BUG! neighbors not added
+    #neighbors[firstDirtX + firstDirtY * 100] = 1
+    start = True
+    while(len(remainingDirt) > 0):
+        examineDirt = remainingDirt.pop()
+        (examineDirtX, examineDirtY) = examineDirt
+        if(((examineDirtX + examineDirtY * 100) in neighbors) or start):
+            neighbors[examineDirtX - 2 + ((examineDirtY - 0) * 100)] = 1
+            neighbors[examineDirtX - 1 + ((examineDirtY - 0) * 100)] = 1
+            neighbors[examineDirtX - 1 + ((examineDirtY - 1) * 100)] = 1
+            neighbors[examineDirtX - 1 + ((examineDirtY + 1) * 100)] = 1
+            neighbors[examineDirtX - 0 + ((examineDirtY - 1) * 100)] = 1
+            neighbors[examineDirtX - 0 + ((examineDirtY - 2) * 100)] = 1
+            neighbors[examineDirtX + 1 + ((examineDirtY - 1) * 100)] = 1
+            neighbors[examineDirtX + 1 + ((examineDirtY - 0) * 100)] = 1
+            neighbors[examineDirtX + 2 + ((examineDirtY - 0) * 100)] = 1
+            neighbors[examineDirtX + 1 + ((examineDirtY + 1) * 100)] = 1
+            neighbors[examineDirtX + 0 + ((examineDirtY + 1) * 100)] = 1
+            neighbors[examineDirtX + 0 + ((examineDirtY + 2) * 100)] = 1
+            start = False
+        else:
+            #found a second cluster!
+            print("dirt", dirt, " neighbors", neighbors)
+            #print("found a second cluster")
+            return 0
+    #no extra cluster
+    print("dirt", dirt, " neighbors", neighbors)
+    return 0
+        
+
+#def polynomialHeuristic(totalSquares, dirt, location, movements):
+def polynomialHeuristic(dirt, location):
+    aboveDirt = 0
+    if location in dirt:
+        aboveDirt = 1
+
+    #twoClustering = 0#twoClusterHeuristic(dirt)
+
+    #return totalSquares - (len(dirt) * 0.2) - (aboveDirt * 0.5) - (len(movements) / .1) + twoClustering
+    #return ((len(dirt) *2.000001) - 2) - (aboveDirt * 0.5)
+    return ((len(dirt) * 2) - 2) + ((len(dirt))*0.00001) - (aboveDirt * 0.5)
+
+def simpleNumDirtyHeuristic(dirt, location):
     #start = time.clock()
     #isolatedDirt = isolatedDirty(dirt, location)
     #end = time.clock()
@@ -72,7 +118,7 @@ def solver(node, walls, heuristic, CM):
     overlap = 0
     explored = {}
     (movements, location, dirt) = node
-    newWeight = 0 + heuristic(dirt, location)
+    newWeight = len(movements) + heuristic(dirt, location)
     q = [] #heapq
     heapq.heappush(q, (newWeight, movements, location, dirt))
     while (CM.isCompleted() == False) :
@@ -85,6 +131,7 @@ def solver(node, walls, heuristic, CM):
         #if(len(q) > 1):
             #print("len(q) > 2000. oversize error? numExplored = ", numExplored, " weight =", weight)
         #print("popped node: weight", weight, " movements ", movements, " location ", location, " dirt ", dirt)
+        #print("weight", weight, " num dirt", len(dirt))
         if ( len(dirt) <= 0 ) :
             if (len(movements) < goalMoves) :
                 logging = True
@@ -115,7 +162,7 @@ def solver(node, walls, heuristic, CM):
             newDirt.remove(location)
             newMovements = movements #copy.deepcopy(movements) #slow #todo: this deepcopy can be eliminated, since we are returing immediately after this
             newMovements.append('Suck')
-            newWeight = len(newMovements) + heuristic(newDirt, location) #A* heuristic
+            newWeight = len(newMovements) + heuristic(dirt, location) #A* heuristic
             if( getHash(location, newDirt, newMovements) in explored):
                 overlap += 1
                 continue
@@ -133,7 +180,7 @@ def solver(node, walls, heuristic, CM):
         if ( not (( newLocation in walls) )) : #or (newX > roomWidth))) :
             newMovements = copy.deepcopy(movements) #slow
             newMovements.append('East')
-            newWeight = weight + 1 + heuristic(dirt, newLocation) #A* heuristic
+            newWeight = len(newMovements) + heuristic(dirt, location) #A* heuristic
             if(not(getHash(newLocation, dirt, newMovements) in explored)):
                 overlap += 1
                 heapq.heappush(q, (newWeight, newMovements, newLocation, dirt))
@@ -144,7 +191,7 @@ def solver(node, walls, heuristic, CM):
         if ( not ((newLocation in walls) )) : # or (newX <= 0))) :
             newMovements = copy.deepcopy(movements) #slow
             newMovements.append('West')
-            newWeight = weight + 1 + heuristic(dirt, newLocation) #A* heuristic
+            newWeight = len(newMovements) + heuristic(dirt, location) #A* heuristic
             if(not(getHash(newLocation, dirt, newMovements) in explored)):
                 overlap += 1
                 heapq.heappush(q, (newWeight, newMovements, newLocation, dirt))
@@ -155,7 +202,7 @@ def solver(node, walls, heuristic, CM):
         if ( not ((newLocation in walls) )) : # or (newY <= 0))) :
             newMovements = copy.deepcopy(movements) #slow
             newMovements.append('North')
-            newWeight = weight + 1 + heuristic(dirt, newLocation) #A* heuristic
+            newWeight = len(newMovements) + heuristic(dirt, location) #A* heuristic
             if(not(getHash(newLocation, dirt, newMovements) in explored)):
                 overlap += 1
                 heapq.heappush(q, (newWeight, newMovements, newLocation, dirt))
@@ -166,7 +213,7 @@ def solver(node, walls, heuristic, CM):
         if ( not ((newLocation in walls) )) : # or (newY > roomHeight))) :
             newMovements = copy.deepcopy(movements) #slow
             newMovements.append('South')
-            newWeight = weight + 1 + heuristic(dirt, newLocation) #A* heuristic
+            newWeight = len(newMovements) + heuristic(dirt, location) #A* heuristic
             if(not(getHash(newLocation, dirt, newMovements) in explored)):
                 overlap += 1
                 heapq.heappush(q, (newWeight, newMovements, newLocation, dirt))
@@ -189,10 +236,16 @@ class aStarRobot(DiscreteRobot, concurrencyManager):
         location = (startLX, startLY)
         firstNode = ([], location, self.getDirty())
 
-        self.CM = concurrencyManager(self.getNumTiles())
+        fullRoom = False
+        if((len(self.getDirty()) / self.getNumTiles()) > 0.9):
+            fullRoom = True
+        print("full room ", fullRoom, " ", (self.getNumTiles() / len(self.getDirty())))
+
+        self.CM = concurrencyManager()
 
         # Select the heuristic we wish to use
-        heuristic = simpleNumDirtyHeuristic
+        #heuristic = simpleNumDirtyHeuristic
+        heuristic = polynomialHeuristic
         #heuristic = dijsktrasHeuristic
 
         startTime = time.clock()
@@ -273,10 +326,18 @@ easyRoom = RectangularRoom(4,4)
 easyRoom.setWall((2,1), (2,2))
 allRooms.append(easyRoom) # [8] for debugging only, not graded
 
+largerFullTestRoom = RectangularRoom(6,6)
+largerFullTestRoom.setWall((2,2), (2,4))
+allRooms.append(largerFullTestRoom) # [9] medium size full room
+
+room10 = RectangularRoom(7,7)
+#room10.setWall((1,1), (1,2))
+allRooms.append(room10) # [10] 
+
 #############################################    
 def aStar():
-    print(runSimulation(num_trials = 1,
-                    room = allRooms[8], #Change room number here
+    print(runSimulation(num_trials = 3,
+                    room = allRooms[9], #Change room number here
                     robot_type = aStarRobot,
                     ui_enable = True,
                     ui_delay = 0.1))
